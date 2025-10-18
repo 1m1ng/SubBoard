@@ -49,6 +49,40 @@
 
 最简单快捷的部署方式：
 
+```docker-compose.yaml
+services:
+  subboard:
+    image: huiji2333/subboard:latest
+    container_name: subboard
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # 应用配置（请修改为随机密钥）
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here-change-in-production}
+      # 服务器配置
+      - HOST=0.0.0.0
+      - PORT=5000
+      - THREADS=4
+    volumes:
+      # 持久化数据库
+      - ./instance:/app/instance
+      # 持久化日志
+      - ./app.log:/app/app.log
+    networks:
+      - subboard-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  subboard-network:
+    driver: bridge
+```
+
 ```bash
 # 部署
 docker-compose up -d
