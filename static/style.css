@@ -211,7 +211,6 @@ body {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    transform: translateY(-2px);
 }
 
 .form-group small {
@@ -486,13 +485,26 @@ body {
 
 .admin-table tbody tr {
     animation: fadeIn 0.3s ease-out;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
 .admin-table tbody tr:hover {
     background: #f7fafc;
-    transform: scale(1.005);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* 表格内按钮样式优化 - 防止高度变化 */
+.admin-table .btn-small:hover,
+.admin-table .btn-primary:hover,
+.admin-table .btn-danger:hover,
+.admin-table .btn-success:hover,
+.admin-table .btn-warning:hover {
+    transform: none;
+}
+
+.admin-table input:focus,
+.admin-table select:focus,
+.admin-table textarea:focus {
+    transform: none;
 }
 
 /* 徽章 */
@@ -571,7 +583,6 @@ body {
 
 .btn-danger:hover {
     background: #c82333;
-    transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
 }
 
@@ -586,7 +597,6 @@ body {
 }
 
 .btn-success:hover {
-    transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 }
 
@@ -1443,7 +1453,6 @@ footer p {
 }
 
 .btn-warning:hover {
-    transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(245, 87, 108, 0.4);
 }
 
