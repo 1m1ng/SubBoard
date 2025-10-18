@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, session, Response, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
@@ -9,6 +9,7 @@ import logging
 from xui_client import XUIManager
 from dotenv import load_dotenv
 from waitress import serve
+import time
 
 # 加载环境变量
 load_dotenv()
@@ -30,6 +31,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+
+# 节点信息缓存
+# 结构: {user_id: {'data': nodes_info, 'timestamp': time.time()}}
+nodes_cache = {}
+CACHE_DURATION = 120
 
 # 用户模型
 class User(db.Model):
@@ -256,12 +262,6 @@ def index():
             flash('用户不存在！', 'error')
             return redirect(url_for('login'))
 
-        # 获取节点流量信息
-        nodes_info = []
-        manager = get_xui_manager()
-        if user.email and manager:
-            nodes_info = manager.get_all_traffic_info(user.email)
-
         # 生成订阅URL
         subscription_url = None
         if user.subscription_token:
@@ -272,8 +272,55 @@ def index():
             db.session.commit()
             subscription_url = url_for('subscription', token=user.subscription_token, _external=True)
 
-        return render_template('index.html', user=user, nodes=nodes_info, subscription_url=subscription_url)
+        # 首次加载时不获取节点信息，由前端异步加载
+        return render_template('index.html', user=user, nodes=None, subscription_url=subscription_url)
     return redirect(url_for('login'))
+
+# API：获取节点信息（带缓存）
+@app.route('/api/nodes')
+def get_nodes():
+    if 'user_id' not in session:
+        return jsonify({'error': '未登录'}), 401
+    
+    user = db.session.get(User, session['user_id'])
+    if not user:
+        return jsonify({'error': '用户不存在'}), 404
+    
+    user_id = user.id
+    current_time = time.time()
+    
+    # 检查是否强制刷新（通过查询参数 _= 时间戳来判断）
+    force_refresh = request.args.get('_') is not None
+    
+    # 检查缓存是否存在且未过期（非强制刷新时）
+    if not force_refresh and user_id in nodes_cache:
+        cache_entry = nodes_cache[user_id]
+        if current_time - cache_entry['timestamp'] < CACHE_DURATION:
+            logger.info(f'使用缓存数据 - 用户: {user.username}, 缓存年龄: {int(current_time - cache_entry["timestamp"])}秒')
+            return jsonify({
+                'nodes': cache_entry['data'],
+                'cached': True,
+                'cache_age': int(current_time - cache_entry['timestamp'])
+            })
+    
+    # 缓存不存在、已过期或强制刷新，重新获取数据
+    logger.info(f'获取新数据 - 用户: {user.username}, 强制刷新: {force_refresh}')
+    nodes_info = []
+    manager = get_xui_manager()
+    if user.email and manager:
+        nodes_info = manager.get_all_traffic_info(user.email)
+    
+    # 更新缓存
+    nodes_cache[user_id] = {
+        'data': nodes_info,
+        'timestamp': current_time
+    }
+    
+    return jsonify({
+        'nodes': nodes_info,
+        'cached': False,
+        'cache_age': 0
+    })
 
 # 订阅路由（不需要登录）
 @app.route('/sub')
