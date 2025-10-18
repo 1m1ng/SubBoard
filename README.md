@@ -2,10 +2,13 @@
 
 一个基于 Flask 的订阅节点管理面板，用于管理和分发 3XUI 节点订阅。
 
+[![Docker Build](https://github.com/1m1ng/SubBoard/actions/workflows/docker-build.yml/badge.svg)](https://github.com/1m1ng/SubBoard/actions/workflows/docker-build.yml)
+[![Code Quality](https://github.com/1m1ng/SubBoard/actions/workflows/code-quality.yml/badge.svg)](https://github.com/1m1ng/SubBoard/actions/workflows/code-quality.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/huiji2333/subboard)](https://hub.docker.com/r/huiji2333/subboard)
+[![Docker Image Size](https://img.shields.io/docker/image-size/huiji2333/subboard/latest)](https://hub.docker.com/r/huiji2333/subboard)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.0-green.svg)](https://flask.palletsprojects.com/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License](https://img.shields.io/github/license/1m1ng/SubBoard)](LICENSE)
 
 ## ✨ 功能特性
 
@@ -174,12 +177,32 @@ THREADS=4
    - **密码**：面板登录密码
 
 
+## 🤖 CI/CD 自动化
+
+本项目使用 GitHub Actions 实现自动化构建和部署：
+
+### 自动 Docker 镜像构建
+
+- ✅ **自动触发**：每次推送代码或创建标签时自动构建
+- ✅ **多平台支持**：同时构建 `linux/amd64` 和 `linux/arm64` 镜像
+- ✅ **智能标签**：根据分支名和版本标签自动生成镜像标签
+- ✅ **构建缓存**：利用 GitHub Actions 缓存加速构建
+- ✅ **自动推送**：构建完成后自动推送到 Docker Hub
+
+### 代码质量检查
+
+- ✅ **语法检查**：自动检测 Python 语法错误
+- ✅ **代码规范**：使用 flake8 和 black 检查代码质量
+- ✅ **自动运行**：每次推送或 PR 时自动执行
+
+详细的配置和使用说明请参考：[GITHUB_ACTIONS.md](GITHUB_ACTIONS.md)
+
 ## 📁 目录结构
 
 ```
 SubBoard/
 ├── app.py                      # 主应用文件
-├── xui_client.py              # 3XUI API 客户端
+├── xui_client.py              # 3XUI API 客户端（带自动重连）
 ├── subscription_converter.py  # 订阅转换器
 ├── requirements.txt           # 项目依赖
 ├── .env                       # 环境变量配置（需创建）
@@ -188,6 +211,15 @@ SubBoard/
 ├── docker-compose.yml         # Docker Compose 配置
 ├── .dockerignore              # Docker 忽略文件
 ├── README.md                  # 项目说明（本文件）
+├── DOCKER.md                  # Docker 部署详细文档
+├── GITHUB_ACTIONS.md          # GitHub Actions CI/CD 文档
+├── CHECKLIST.md               # 部署前检查清单
+├── QUICKSTART.md              # 快速开始指南
+├── .github/
+│   ├── workflows/
+│   │   ├── docker-build.yml   # Docker 构建工作流
+│   │   └── code-quality.yml   # 代码质量检查工作流
+│   └── BADGES.md              # 徽章使用指南
 ├── instance/                  # 数据库目录（自动创建）
 │   └── subboard.db           # SQLite 数据库
 ├── logs/                      # 日志目录（自动创建）
