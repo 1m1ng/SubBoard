@@ -68,18 +68,47 @@ class XUIClient:
         
         traffic_url = f"{self.base_url}/panel/api/inbounds/getClientTraffics/{email}"
         
-        try:
-            response = self.session.get(traffic_url, verify=False, timeout=10)
-            data = response.json()
-            
-            if data.get('success'):
-                return data.get('obj')
-            else:
-                logger.warning(f"获取流量失败 {self.server}:{self.port}, email: {email}: {data.get('msg')}")
+        # 最多重试一次（检测到 session 失效时重新登录）
+        for attempt in range(2):
+            try:
+                response = self.session.get(traffic_url, verify=False, timeout=10)
+                
+                # 检查响应状态码
+                if response.status_code == 401 or response.status_code == 403:
+                    # 未授权，session 可能已过期
+                    logger.warning(f"Session 可能已过期 {self.server}:{self.port}，尝试重新登录...")
+                    self.logged_in = False
+                    if attempt == 0 and self.login():
+                        continue  # 重新登录成功，重试请求
+                    return None
+                
+                # 尝试解析 JSON
+                try:
+                    data = response.json()
+                except ValueError as json_error:
+                    # JSON 解析失败，可能是返回了 HTML（登录页面）
+                    logger.warning(f"JSON 解析失败 {self.server}:{self.port}，可能 session 已过期: {str(json_error)}")
+                    self.logged_in = False
+                    if attempt == 0 and self.login():
+                        continue  # 重新登录成功，重试请求
+                    return None
+                
+                if data.get('success'):
+                    return data.get('obj')
+                else:
+                    logger.warning(f"获取流量失败 {self.server}:{self.port}, email: {email}: {data.get('msg')}")
+                    return None
+                    
+            except Exception as e:
+                logger.error(f"获取流量信息时发生错误 {self.server}:{self.port}: {str(e)}")
+                if attempt == 0:
+                    # 第一次失败，尝试重新登录
+                    self.logged_in = False
+                    if self.login():
+                        continue  # 重新登录成功，重试请求
                 return None
-        except Exception as e:
-            logger.error(f"获取流量信息时发生错误 {self.server}:{self.port}: {str(e)}")
-            return None
+        
+        return None
     
     def get_subscription(self, sub_id: str) -> Optional[str]:
         """
@@ -117,18 +146,47 @@ class XUIClient:
         
         inbound_url = f"{self.base_url}/panel/api/inbounds/get/{inbound_id}"
         
-        try:
-            response = self.session.get(inbound_url, verify=False, timeout=10)
-            data = response.json()
-            
-            if data.get('success'):
-                return data.get('obj')
-            else:
-                logger.warning(f"获取节点信息失败 {self.server}:{self.port}, inbound_id: {inbound_id}: {data.get('msg')}")
+        # 最多重试一次（检测到 session 失效时重新登录）
+        for attempt in range(2):
+            try:
+                response = self.session.get(inbound_url, verify=False, timeout=10)
+                
+                # 检查响应状态码
+                if response.status_code == 401 or response.status_code == 403:
+                    # 未授权，session 可能已过期
+                    logger.warning(f"Session 可能已过期 {self.server}:{self.port}，尝试重新登录...")
+                    self.logged_in = False
+                    if attempt == 0 and self.login():
+                        continue  # 重新登录成功，重试请求
+                    return None
+                
+                # 尝试解析 JSON
+                try:
+                    data = response.json()
+                except ValueError as json_error:
+                    # JSON 解析失败，可能是返回了 HTML（登录页面）
+                    logger.warning(f"JSON 解析失败 {self.server}:{self.port}，可能 session 已过期: {str(json_error)}")
+                    self.logged_in = False
+                    if attempt == 0 and self.login():
+                        continue  # 重新登录成功，重试请求
+                    return None
+                
+                if data.get('success'):
+                    return data.get('obj')
+                else:
+                    logger.warning(f"获取节点信息失败 {self.server}:{self.port}, inbound_id: {inbound_id}: {data.get('msg')}")
+                    return None
+                    
+            except Exception as e:
+                logger.error(f"获取节点信息时发生错误 {self.server}:{self.port}: {str(e)}")
+                if attempt == 0:
+                    # 第一次失败，尝试重新登录
+                    self.logged_in = False
+                    if self.login():
+                        continue  # 重新登录成功，重试请求
                 return None
-        except Exception as e:
-            logger.error(f"获取节点信息时发生错误 {self.server}:{self.port}: {str(e)}")
-            return None
+        
+        return None
 
 
 class XUIManager:
