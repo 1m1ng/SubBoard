@@ -52,7 +52,7 @@
 
 最简单快捷的部署方式：
 
-```docker-compose.yaml
+```docker-compose
 services:
   subboard:
     image: huiji2333/subboard:latest
@@ -67,6 +67,8 @@ services:
       - HOST=0.0.0.0
       - PORT=5000
       - THREADS=4
+      # 时区配置
+      - TZ=Asia/Shanghai
     volumes:
       # 持久化数据库
       - ./instance:/app/instance
