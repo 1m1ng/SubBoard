@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}用户管理 - SubBoard{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h2>用户管理面板</h2>
+    
+    <!-- 创建用户表单 -->
+    <div class="admin-section">
+        <h3>创建新用户</h3>
+        <form method="POST" action="{{ url_for('create_user') }}" class="admin-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required minlength="6">
+                </div>
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" name="is_admin">
+                        <span>管理员权限</span>
+                    </label>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">创建用户</button>
+        </form>
+    </div>
+
+    <!-- 用户列表 -->
+    <div class="admin-section">
+        <h3>用户列表 ({{ users|length }} 个用户)</h3>
+        <div class="table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>邮箱</th>
+                        <th>权限</th>
+                        <th>注册时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            {% if user.is_admin %}
+                                <span class="badge badge-admin">管理员</span>
+                            {% else %}
+                                <span class="badge badge-user">普通用户</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <button class="btn-small btn-primary" onclick="editUser({{ user.id }}, '{{ user.username }}', '{{ user.email }}', {{ user.is_admin|lower }})">编辑</button>
+                            <button class="btn-small btn-danger" onclick="if(confirm('确定要删除用户 {{ user.username }} 吗？')) { window.location.href='{{ url_for('delete_user', user_id=user.id) }}'; }">删除</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 被锁定的IP -->
+    <div class="admin-section">
+        <h3>被锁定的IP ({{ blocked_ips|length }} 个)</h3>
+        {% if blocked_ips %}
+        <div class="table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>IP地址</th>
+                        <th>失败次数</th>
+                        <th>锁定至</th>
+                        <th>最后尝试</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ip in blocked_ips %}
+                    <tr>
+                        <td>{{ ip.ip_address }}</td>
+                        <td>{{ ip.failed_attempts }}</td>
+                        <td>
+                            {% if ip.blocked_until %}
+                                {{ ip.blocked_until.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ ip.last_attempt.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            <a href="{{ url_for('unblock_ip', ip_id=ip.id) }}" 
+                               class="btn-small btn-success">解锁</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">暂无被锁定的IP</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 编辑用户模态框 -->
+<div id="editUserModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h3>编辑用户</h3>
+        <form id="editUserForm" method="POST" action="">
+            <div class="form-group">
+                <label for="edit_username">用户名</label>
+                <input type="text" id="edit_username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_email">邮箱</label>
+                <input type="email" id="edit_email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_password">新密码（留空则不修改）</label>
+                <input type="password" id="edit_password" name="password" minlength="6">
+            </div>
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" id="edit_is_admin" name="is_admin">
+                    <span>管理员权限</span>
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">保存修改</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function editUser(userId, username, email, isAdmin) {
+    document.getElementById('edit_username').value = username;
+    document.getElementById('edit_email').value = email;
+    document.getElementById('edit_password').value = '';
+    document.getElementById('edit_is_admin').checked = isAdmin;
+    document.getElementById('editUserForm').action = `/admin/edit_user/${userId}`;
+    document.getElementById('editUserModal').style.display = 'block';
+}
+
+function closeEditModal() {
+    document.getElementById('editUserModal').style.display = 'none';
+}
+
+// 点击模态框外部关闭
+window.onclick = function(event) {
+    const modal = document.getElementById('editUserModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

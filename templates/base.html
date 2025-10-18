@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SubBoard - 订阅节点管理系统{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <a href="{{ url_for('index') }}">🚀 SubBoard</a>
+            </div>
+            <div class="navbar-menu">
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('index') }}">🏠 首页</a>
+                    {% if session.get('is_admin') %}
+                        <a href="{{ url_for('admin') }}">👥 用户管理</a>
+                        <a href="{{ url_for('servers') }}">🖥️ 服务器管理</a>
+                        <a href="{{ url_for('mihomo_template') }}">⚙️ Mihomo 模板</a>
+                    {% endif %}
+                    <a href="{{ url_for('profile') }}">👤 个人资料</a>
+                    <a href="{{ url_for('logout') }}">🚪 登出</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}">🔐 登录</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <span class="alert-icon">
+                            {% if category == 'success' %}✓{% elif category == 'error' %}✗{% else %}ℹ{% endif %}
+                        </span>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>© 2025 SubBoard - 订阅节点管理系统 | 由 ❤️ 构建</p>
+        </div>
+    </footer>
+</body>
+</html>

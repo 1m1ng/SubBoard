@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Mihomo 模板管理 - SubBoard{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h2>⚙️ Mihomo 配置模板管理</h2>
+    
+    <!-- 模板编辑器 -->
+    <div class="admin-section">
+        <h3>📝 编辑模板</h3>
+        <form method="POST" action="{{ url_for('save_mihomo_template') }}" id="templateForm">
+            <div class="form-group">
+                <label for="name">模板名称</label>
+                <input type="text" id="name" name="name" 
+                       value="{% if active_template %}{{ active_template.name }}{% else %}默认模板{% endif %}" 
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="template_content">
+                    模板内容 (YAML 格式)
+                    <small>请确保 YAML 格式正确，proxies 字段会自动被替换为订阅节点</small>
+                </label>
+                <div class="yaml-editor-wrapper">
+                    <textarea id="template_content" name="template_content" 
+                              rows="25" class="yaml-editor" 
+                              spellcheck="false">{% if active_template %}{{ active_template.template_content }}{% else %}mode: rule
+socks-port: 1080
+tproxy-port: 1536
+mixed-port: 7890
+redir-port: 7891
+ipv6: true
+allow-lan: true
+unified-delay: true
+tcp-concurrent: true
+
+find-process-mode: strict
+global-client-fingerprint: chrome
+
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+keep-alive-idle: 600
+keep-alive-interval: 30
+
+dns:
+  enable: true
+  ipv6: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 28.0.0.1/8
+  default-nameserver:
+    - 223.5.5.5
+  nameserver:
+    - https://223.5.5.5/dns-query
+    - https://120.53.53.53/dns-query
+
+proxy-groups:
+  - {name: Proxy, type: select, proxies: [Auto], include-all-proxies: true}
+  - {name: Auto, type: url-test, include-all-proxies: true}
+
+rules:
+  - MATCH,Proxy
+{% endif %}</textarea>
+                </div>
+                <div class="editor-actions">
+                    <button type="button" class="btn-small btn-secondary" onclick="formatYAML()">
+                        📐 格式化
+                    </button>
+                    <button type="button" class="btn-small btn-secondary" onclick="validateYAML()">
+                        ✓ 验证 YAML
+                    </button>
+                </div>
+            </div>
+            
+            <div class="checkbox-group">
+                <label>
+                    <input type="hidden" name="set_active" value="false">
+                    <input type="checkbox" name="set_active" value="true" 
+                           {% if active_template %}checked{% endif %} 
+                           onchange="this.previousElementSibling.disabled = this.checked;">
+                    <span>设置为活动模板</span>
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success">💾 保存模板</button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 模板列表 -->
+    <div class="admin-section">
+        <h3>📋 已保存的模板</h3>
+        
+        {% if templates %}
+        <div class="table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>更新时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for template in templates %}
+                    <tr>
+                        <td><strong>{{ template.name }}</strong></td>
+                        <td>
+                            {% if template.is_active %}
+                                <span class="badge badge-admin">✓ 活动</span>
+                            {% else %}
+                                <span class="badge badge-user">待激活</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ template.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ template.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <div class="actions">
+                                {% if not template.is_active %}
+                                <button class="btn-small btn-primary" 
+                                        onclick="if(confirm('确定要激活模板 {{ template.name }} 吗？')) { window.location.href='{{ url_for('set_active_template', template_id=template.id) }}'; }">
+                                    激活
+                                </button>
+                                {% endif %}
+                                <button class="btn-small btn-primary" 
+                                        onclick="loadTemplate({{ template.id }}, '{{ template.name }}', `{{ template.template_content | replace('`', '\\`') }}`)">
+                                    编辑
+                                </button>
+                                <button class="btn-small btn-danger" 
+                                        onclick="if(confirm('确定要删除模板 {{ template.name }} 吗？')) { window.location.href='{{ url_for('delete_mihomo_template', template_id=template.id) }}'; }">
+                                    删除
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">暂无保存的模板</p>
+        {% endif %}
+    </div>
+    
+    <!-- 使用说明 -->
+    <div class="admin-section">
+        <h3>📖 使用说明</h3>
+        <div class="info-box">
+            <h4>1. 模板说明</h4>
+            <p>Mihomo 配置模板用于将订阅链接转换为 Mihomo 内核可读的 YAML 配置文件。</p>
+            
+            <h4>2. 自动替换</h4>
+            <p><code>proxies</code> 字段会自动被替换为从订阅链接解析出的节点列表，无需手动配置。</p>
+            
+            <h4>3. 客户端识别</h4>
+            <p>当订阅链接的 User-Agent 包含 <code>clash</code> 或 <code>Mihomo</code> 时，会自动返回 YAML 格式配置；否则返回标准 Base64 格式。</p>
+            
+            <h4>4. 配置示例</h4>
+            <p>模板应包含基本的 Mihomo 配置项，如 mode、port、dns、proxy-groups、rules 等。</p>
+            
+            <h4>5. 注意事项</h4>
+            <ul>
+                <li>保存前请确保 YAML 格式正确</li>
+                <li>同一时间只能有一个活动模板</li>
+                <li>proxy-groups 中使用 <code>include-all-proxies: true</code> 可自动包含所有节点</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+// 加载模板到编辑器
+function loadTemplate(id, name, content) {
+    document.getElementById('name').value = name;
+    document.getElementById('template_content').value = content;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// 验证 YAML
+function validateYAML() {
+    const content = document.getElementById('template_content').value;
+    
+    fetch('/mihomo_template/validate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: content })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.valid) {
+            alert('✓ YAML 格式正确！');
+        } else {
+            alert('✗ YAML 格式错误:\n' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('验证失败: ' + error);
+    });
+}
+
+// 格式化 YAML（简单的缩进处理）
+function formatYAML() {
+    const textarea = document.getElementById('template_content');
+    const content = textarea.value;
+    
+    // 这里可以添加更复杂的格式化逻辑
+    // 目前只是简单的提示
+    alert('YAML 格式化功能提示：\n\n1. 确保使用空格缩进（通常是2个空格）\n2. 列表项使用 "- " 开头\n3. 键值对使用 ": " 分隔\n4. 多行内容使用 | 或 >');
+}
+
+// 表单提交前的额外验证
+document.getElementById('templateForm').addEventListener('submit', function(e) {
+    const content = document.getElementById('template_content').value.trim();
+    
+    if (!content) {
+        e.preventDefault();
+        alert('模板内容不能为空！');
+        return false;
+    }
+    
+    // 简单的 YAML 语法检查
+    const lines = content.split('\n');
+    let hasError = false;
+    let errorMessage = '';
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        // 检查是否使用了 tab（YAML 不允许 tab）
+        if (line.includes('\t')) {
+            hasError = true;
+            errorMessage = `第 ${i + 1} 行包含 Tab 字符，YAML 不允许使用 Tab 缩进，请使用空格`;
+            break;
+        }
+    }
+    
+    if (hasError) {
+        e.preventDefault();
+        alert('YAML 格式错误:\n' + errorMessage);
+        return false;
+    }
+});
+</script>
+{% endblock %}

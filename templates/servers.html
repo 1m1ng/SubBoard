@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}服务器管理 - SubBoard{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h2>服务器管理面板</h2>
+    
+    <!-- 添加服务器表单 -->
+    <div class="admin-section">
+        <h3>添加新服务器</h3>
+        <form method="POST" action="{{ url_for('add_server') }}" class="admin-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="board_name">服务器标识</label>
+                    <input type="text" id="board_name" name="board_name" required 
+                           placeholder="例如: server">
+                    <small>唯一标识符，建议使用小写字母、数字和连字符</small>
+                </div>
+                <div class="form-group">
+                    <label for="server">服务器地址</label>
+                    <input type="text" id="server" name="server" required 
+                           placeholder="例如: example.com">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="port">端口</label>
+                    <input type="number" id="port" name="port" required 
+                           placeholder="例如: 443" min="1" max="65535">
+                </div>
+                <div class="form-group">
+                    <label for="path">路径</label>
+                    <input type="text" id="path" name="path" required 
+                           placeholder="例如: 1234567890abcdefg">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sub_path">订阅路径</label>
+                    <input type="text" id="sub_path" name="sub_path" 
+                           placeholder="例如: sub0">
+                    <small>订阅链接的路径前缀</small>
+                </div>
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">添加服务器</button>
+        </form>
+    </div>
+
+    <!-- 服务器列表 -->
+    <div class="admin-section">
+        <h3>服务器列表 ({{ boards|length }} 个服务器)</h3>
+        {% if boards %}
+        <div class="table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>标识</th>
+                        <th>服务器地址</th>
+                        <th>端口</th>
+                        <th>路径</th>
+                        <th>订阅路径</th>
+                        <th>用户名</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for board_name, board_config in boards.items() %}
+                    <tr>
+                        <td><strong>{{ board_name }}</strong></td>
+                        <td>{{ board_config.server }}</td>
+                        <td>{{ board_config.port }}</td>
+                        <td>{{ board_config.path }}</td>
+                        <td>{{ board_config.sub_path }}</td>
+                        <td>{{ board_config.username }}</td>
+                        <td>
+                            <button class="btn-small btn-primary" 
+                                    onclick="editServer('{{ board_name }}', '{{ board_config.server }}', {{ board_config.port }}, '{{ board_config.path }}', '{{ board_config.sub_path }}', '{{ board_config.username }}')">
+                                编辑
+                            </button>
+                            <button class="btn-small btn-danger" 
+                                    onclick="if(confirm('确定要删除服务器 {{ board_name }} 吗？')) { window.location.href='{{ url_for('delete_server', board_name=board_name) }}'; }">
+                                删除
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">暂无服务器配置</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 编辑服务器模态框 -->
+<div id="editServerModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h3>编辑服务器</h3>
+        <form id="editServerForm" method="POST" action="">
+            <div class="form-group">
+                <label for="edit_server">服务器地址</label>
+                <input type="text" id="edit_server" name="server" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_port">端口</label>
+                <input type="number" id="edit_port" name="port" required min="1" max="65535">
+            </div>
+            <div class="form-group">
+                <label for="edit_path">路径</label>
+                <input type="text" id="edit_path" name="path" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_sub_path">订阅路径</label>
+                <input type="text" id="edit_sub_path" name="sub_path" placeholder="例如: sub0">
+                <small>订阅链接的路径前缀</small>
+            </div>
+            <div class="form-group">
+                <label for="edit_username">用户名</label>
+                <input type="text" id="edit_username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="edit_password">密码（留空则不修改）</label>
+                <input type="password" id="edit_password" name="password">
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">保存修改</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function editServer(boardName, server, port, path, subPath, username) {
+    document.getElementById('edit_server').value = server;
+    document.getElementById('edit_port').value = port;
+    document.getElementById('edit_path').value = path;
+    document.getElementById('edit_sub_path').value = subPath;
+    document.getElementById('edit_username').value = username;
+    document.getElementById('edit_password').value = '';
+    document.getElementById('editServerForm').action = `/servers/edit/${boardName}`;
+    document.getElementById('editServerModal').style.display = 'block';
+}
+
+function closeEditModal() {
+    document.getElementById('editServerModal').style.display = 'none';
+}
+
+// 点击模态框外部关闭
+window.onclick = function(event) {
+    const modal = document.getElementById('editServerModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

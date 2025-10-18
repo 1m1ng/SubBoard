@@ -1,0 +1,17 @@
+# Docker 忽略文件
+.git
+.gitignore
+.env
+*.pyc
+__pycache__
+*.log
+instance/
+logs/
+.venv
+venv/
+*.md
+!README.md
+.vscode/
+.idea/
+*.db
+*.db-journal
