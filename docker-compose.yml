@@ -15,8 +15,6 @@ services:
     volumes:
       # 持久化数据库
       - ./instance:/app/instance
-      # 持久化日志
-      - ./app.log:/app/app.log
     networks:
       - subboard-network
     healthcheck:
