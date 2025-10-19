@@ -35,7 +35,7 @@ db = SQLAlchemy(app)
 # 节点信息缓存
 # 结构: {user_id: {'data': nodes_info, 'timestamp': time.time()}}
 nodes_cache = {}
-CACHE_DURATION = 120
+CACHE_DURATION = 300
 
 # 用户模型
 class User(db.Model):
