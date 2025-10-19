@@ -9,7 +9,7 @@
     <!-- 创建用户表单 -->
     <div class="admin-section">
         <h3>创建新用户</h3>
-        <form method="POST" action="{{ url_for('create_user') }}" class="admin-form">
+        <form method="POST" action="{{ url_for('admin.create_user') }}" class="admin-form">
             <div class="form-row">
                 <div class="form-group">
                     <label for="username">用户名</label>
@@ -67,7 +67,7 @@
                         <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>
                             <button class="btn-small btn-primary" onclick="editUser({{ user.id }}, '{{ user.username }}', '{{ user.email }}', {{ user.is_admin|lower }})">编辑</button>
-                            <button class="btn-small btn-danger" onclick="if(confirm('确定要删除用户 {{ user.username }} 吗？')) { window.location.href='{{ url_for('delete_user', user_id=user.id) }}'; }">删除</button>
+                            <button class="btn-small btn-danger" onclick="if(confirm('确定要删除用户 {{ user.username }} 吗？')) { window.location.href='{{ url_for('admin.delete_user', user_id=user.id) }}'; }">删除</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -105,7 +105,7 @@
                         </td>
                         <td>{{ ip.last_attempt.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                         <td>
-                            <a href="{{ url_for('unblock_ip', ip_id=ip.id) }}" 
+                            <a href="{{ url_for('admin.unblock_ip', ip_id=ip.id) }}" 
                                class="btn-small btn-success">解锁</a>
                         </td>
                     </tr>

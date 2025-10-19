@@ -20,7 +20,7 @@
                 </svg>
                 复制订阅链接
             </button>
-            <form method="POST" action="{{ url_for('refresh_token') }}" style="display: inline;" 
+            <form method="POST" action="{{ url_for('main.refresh_token') }}" style="display: inline;" 
                   onsubmit="return confirm('刷新Token后，旧的订阅链接将失效。确定要继续吗？');">
                 <button type="submit" class="btn btn-warning">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -288,3 +288,5 @@ document.addEventListener('DOMContentLoaded', loadNodes);
 document.getElementById('refreshNodes')?.addEventListener('click', refreshNodes);
 </script>
 {% endblock %}
+
+<!-- 检查所有 url_for() 调用并添加对应的蓝图前缀 -->

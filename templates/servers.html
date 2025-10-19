@@ -9,7 +9,7 @@
     <!-- 添加服务器表单 -->
     <div class="admin-section">
         <h3>添加新服务器</h3>
-        <form method="POST" action="{{ url_for('add_server') }}" class="admin-form">
+        <form method="POST" action="{{ url_for('servers.add_server') }}" class="admin-form">
             <div class="form-row">
                 <div class="form-group">
                     <label for="board_name">服务器标识</label>
@@ -89,7 +89,7 @@
                                 编辑
                             </button>
                             <button class="btn-small btn-danger" 
-                                    onclick="if(confirm('确定要删除服务器 {{ board_name }} 吗？')) { window.location.href='{{ url_for('delete_server', board_name=board_name) }}'; }">
+                                    onclick="if(confirm('确定要删除服务器 {{ board_name }} 吗？')) { window.location.href='{{ url_for('servers.delete_server', board_name=board_name) }}'; }">
                                 删除
                             </button>
                         </td>

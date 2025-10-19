@@ -26,7 +26,7 @@
         <!-- 侧边栏菜单 -->
         <nav class="sidebar-nav">
             {% if session.get('user_id') %}
-                <a href="{{ url_for('index') }}" class="sidebar-item" title="首页">
+                <a href="{{ url_for('main.index') }}" class="sidebar-item" title="首页">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                         <polyline points="9 22 9 12 15 12 15 22"></polyline>
@@ -35,7 +35,7 @@
                 </a>
 
                 {% if session.get('is_admin') %}
-                    <a href="{{ url_for('admin') }}" class="sidebar-item" title="用户管理">
+                    <a href="{{ url_for('admin.admin') }}" class="sidebar-item" title="用户管理">
                         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                             <circle cx="9" cy="7" r="4"></circle>
@@ -45,7 +45,7 @@
                         <span class="sidebar-text">用户管理</span>
                     </a>
 
-                    <a href="{{ url_for('servers') }}" class="sidebar-item" title="服务器管理">
+                    <a href="{{ url_for('servers.servers') }}" class="sidebar-item" title="服务器管理">
                         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
                             <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
@@ -55,7 +55,7 @@
                         <span class="sidebar-text">服务器管理</span>
                     </a>
 
-                    <a href="{{ url_for('mihomo_template') }}" class="sidebar-item" title="Mihomo 模板">
+                    <a href="{{ url_for('mihomo.mihomo_template') }}" class="sidebar-item" title="Mihomo 模板">
                         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
@@ -67,7 +67,7 @@
                     </a>
                 {% endif %}
 
-                <a href="{{ url_for('profile') }}" class="sidebar-item" title="个人资料">
+                <a href="{{ url_for('auth.profile') }}" class="sidebar-item" title="个人资料">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                         <circle cx="12" cy="7" r="4"></circle>
@@ -77,7 +77,7 @@
 
                 <div class="sidebar-divider"></div>
 
-                <a href="{{ url_for('logout') }}" class="sidebar-item" title="登出">
+                <a href="{{ url_for('auth.logout') }}" class="sidebar-item" title="退出登录">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                         <polyline points="16 17 21 12 16 7"></polyline>
@@ -86,7 +86,7 @@
                     <span class="sidebar-text">登出</span>
                 </a>
             {% else %}
-                <a href="{{ url_for('login') }}" class="sidebar-item" title="登录">
+                <a href="{{ url_for('auth.login') }}" class="sidebar-item" title="登录">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
                         <polyline points="10 17 15 12 10 7"></polyline>

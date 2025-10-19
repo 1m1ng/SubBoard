@@ -9,7 +9,7 @@
     <!-- 模板编辑器 -->
     <div class="admin-section">
         <h3>📝 编辑模板</h3>
-        <form method="POST" action="{{ url_for('save_mihomo_template') }}" id="templateForm">
+        <form method="POST" action="{{ url_for('mihomo.save_mihomo_template') }}" id="templateForm">
             <div class="form-group">
                 <label for="name">模板名称</label>
                 <input type="text" id="name" name="name" 
@@ -124,7 +124,7 @@ rules:
                             <div class="actions">
                                 {% if not template.is_active %}
                                 <button class="btn-small btn-primary" 
-                                        onclick="if(confirm('确定要激活模板 {{ template.name }} 吗？')) { window.location.href='{{ url_for('set_active_template', template_id=template.id) }}'; }">
+                                        onclick="if(confirm('确定要激活模板 {{ template.name }} 吗？')) { window.location.href='{{ url_for('mihomo.set_active_template', template_id=template.id) }}'; }">
                                     激活
                                 </button>
                                 {% endif %}
@@ -133,7 +133,7 @@ rules:
                                     编辑
                                 </button>
                                 <button class="btn-small btn-danger" 
-                                        onclick="if(confirm('确定要删除模板 {{ template.name }} 吗？')) { window.location.href='{{ url_for('delete_mihomo_template', template_id=template.id) }}'; }">
+                                        onclick="if(confirm('确定要删除模板 {{ template.name }} 吗？')) { window.location.href='{{ url_for('mihomo.delete_mihomo_template', template_id=template.id) }}'; }">
                                     删除
                                 </button>
                             </div>
