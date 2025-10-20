@@ -131,17 +131,19 @@ def edit_user(user_id):
             next_month = current_date.month % 12 + 1
             year_increment = 1 if next_month == 1 else 0
             try:
-                # Attempt to set next_reset_time with the same day as expire_date
+                # 更新 next_reset_time 的小时和分钟以匹配到期时间
                 user.next_reset_time = current_date.replace(
-                    year=current_date.year + year_increment, month=next_month, day=expire_date.day
+                    year=current_date.year + year_increment, month=next_month, day=expire_date.day,
+                    hour=expire_date.hour, minute=expire_date.minute
                 )
             except ValueError:
-                # If the day is invalid for the next month, use the last day of the next month
+                # 如果日期无效，则使用下个月的最后一天，并设置相同的小时和分钟
                 last_day_of_next_month = (current_date.replace(
                     year=current_date.year + year_increment, month=next_month, day=1
                 ) - timedelta(days=1)).day
                 user.next_reset_time = current_date.replace(
-                    year=current_date.year + year_increment, month=next_month, day=last_day_of_next_month
+                    year=current_date.year + year_increment, month=next_month, day=last_day_of_next_month,
+                    hour=expire_date.hour, minute=expire_date.minute
                 )
         else:
             user.next_reset_time = None
