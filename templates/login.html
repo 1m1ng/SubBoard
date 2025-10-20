@@ -15,6 +15,21 @@
         </div>
         <div class="form-container">
             <h2>用户登录</h2>
+            
+            <!-- Flash 消息提示 -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span class="alert-icon">
+                                {% if category == 'success' %}✓{% elif category == 'error' %}✗{% else %}ℹ{% endif %}
+                            </span>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
             {% if blocked %}
             <div class="warning-box">
                 <p>⚠️ 您的IP已被锁定，请稍后再试。</p>

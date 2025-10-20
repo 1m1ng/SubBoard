@@ -31,6 +31,8 @@ class Config:
     MAX_FAILED_ATTEMPTS = 5  # 最大登录失败次数
     BLOCK_DURATION = 30  # IP锁定时长（分钟）
 
+    # 所有时间字段应使用 UTC 时间
+
 
 class DevelopmentConfig(Config):
     """开发环境配置"""

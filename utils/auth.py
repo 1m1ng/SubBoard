@@ -27,8 +27,10 @@ def check_ip_blocked(ip_address):
     """
     ip_record = IPBlock.query.filter_by(ip_address=ip_address).first()
     if ip_record and ip_record.blocked_until:
-        if datetime.now(timezone.utc) < ip_record.blocked_until:
-            return True, ip_record.blocked_until
+        # 确保 blocked_until 是 offset-aware
+        blocked_until_aware = ip_record.blocked_until.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) < blocked_until_aware:
+            return True, blocked_until_aware
         else:
             # 解除锁定
             ip_record.blocked_until = None
