@@ -61,6 +61,29 @@ def create_user():
             user.package_expire_time = datetime.fromisoformat(package_expire_time)
         if next_reset_time:
             user.next_reset_time = datetime.fromisoformat(next_reset_time)
+        elif package_expire_time:
+            # Calculate next reset time based on the expiration date's month and day
+            expire_date = datetime.fromisoformat(package_expire_time)
+            current_date = datetime.now()
+            next_month = current_date.month % 12 + 1
+            year_increment = 1 if next_month == 1 else 0
+            try:
+                # 更新 next_reset_time 的小时和分钟以匹配到期时间
+                user.next_reset_time = current_date.replace(
+                    year=current_date.year + year_increment, month=next_month, day=expire_date.day,
+                    hour=expire_date.hour, minute=expire_date.minute
+                )
+            except ValueError:
+                # 如果日期无效，则使用下个月的最后一天，并设置相同的小时和分钟
+                last_day_of_next_month = (current_date.replace(
+                    year=current_date.year + year_increment, month=next_month, day=1
+                ) - timedelta(days=1)).day
+                user.next_reset_time = current_date.replace(
+                    year=current_date.year + year_increment, month=next_month, day=last_day_of_next_month,
+                    hour=expire_date.hour, minute=expire_date.minute
+                )
+        else:
+            user.next_reset_time = None
     
     db.session.add(user)
     db.session.commit()
