@@ -1,9 +1,9 @@
 """管理员路由"""
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from extensions import db, logger
 from models import User, IPBlock, Package
-from utils import generate_random_password
 from utils.decorators import admin_required
+from datetime import datetime, timedelta
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -116,7 +116,6 @@ def edit_user(user_id):
         flash('密码长度至少为6位，密码未更新！', 'error')
     
     # 更新套餐信息
-    from datetime import datetime, timedelta
     if package_id:
         user.package_id = int(package_id)
         if package_expire_time:
@@ -128,11 +127,22 @@ def edit_user(user_id):
         elif package_expire_time:
             # Calculate next reset time based on the expiration date's month and day
             expire_date = datetime.fromisoformat(package_expire_time)
-            next_month = expire_date.month % 12 + 1
+            current_date = datetime.now()
+            next_month = current_date.month % 12 + 1
             year_increment = 1 if next_month == 1 else 0
-            user.next_reset_time = expire_date.replace(
-                year=expire_date.year + year_increment, month=next_month
-            )
+            try:
+                # Attempt to set next_reset_time with the same day as expire_date
+                user.next_reset_time = current_date.replace(
+                    year=current_date.year + year_increment, month=next_month, day=expire_date.day
+                )
+            except ValueError:
+                # If the day is invalid for the next month, use the last day of the next month
+                last_day_of_next_month = (current_date.replace(
+                    year=current_date.year + year_increment, month=next_month, day=1
+                ) - timedelta(days=1)).day
+                user.next_reset_time = current_date.replace(
+                    year=current_date.year + year_increment, month=next_month, day=last_day_of_next_month
+                )
         else:
             user.next_reset_time = None
     else:
