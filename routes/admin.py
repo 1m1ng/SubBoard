@@ -1,5 +1,5 @@
 """管理员路由"""
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
 from extensions import db, logger
 from models import User, IPBlock, Package
 from utils import generate_random_password
@@ -152,7 +152,7 @@ def edit_user(user_id):
 def delete_user(user_id):
     """管理员：删除用户"""
     # 不能删除自己
-    if user_id == session['user_id']:
+    if user_id == g.user_id:
         flash('不能删除自己的账号！', 'error')
         return redirect(url_for('admin.admin'))
     

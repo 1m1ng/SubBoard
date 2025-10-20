@@ -11,6 +11,10 @@ class Config:
     # Flask配置
     SECRET_KEY = os.getenv('SECRET_KEY')
     
+    # JWT配置
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', SECRET_KEY)  # JWT密钥，默认使用SECRET_KEY
+    JWT_ACCESS_TOKEN_EXPIRES = 7 * 24 * 3600  # JWT过期时间（秒），默认7天
+    
     # 数据库配置
     SQLALCHEMY_DATABASE_URI = 'sqlite:///data.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False

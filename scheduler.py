@@ -43,6 +43,16 @@ class TrafficScheduler:
             replace_existing=True
         )
         
+        # 每小时清理一次过期的JWT token
+        self.scheduler.add_job(
+            func=self._cleanup_expired_tokens,
+            trigger='interval',
+            hours=1,
+            id='cleanup_expired_tokens',
+            name='清理过期JWT令牌',
+            replace_existing=True
+        )
+        
         self.scheduler.start()
         logger.info("流量监控调度器已启动，将每分钟执行一次任务")
         
@@ -436,6 +446,17 @@ class TrafficScheduler:
         except Exception as e:
             logger.error(f"启用用户 {email} 时出错: {str(e)}", exc_info=True)
             return False
+    
+    def _cleanup_expired_tokens(self):
+        """定期清理过期的JWT token"""
+        with self.app.app_context():
+            try:
+                logger.info("开始清理过期的JWT令牌...")
+                from utils import cleanup_expired_tokens
+                cleanup_expired_tokens()
+                logger.info("过期JWT令牌清理完成")
+            except Exception as e:
+                logger.error(f"清理过期JWT令牌时发生错误: {str(e)}", exc_info=True)
 
 
 # 全局调度器实例

@@ -1,5 +1,5 @@
 """主页路由"""
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, g
 from extensions import db, logger
 from models import User, Package
 from utils.cache import inbounds_cache
@@ -12,39 +12,38 @@ main_bp = Blueprint('main', __name__)
 
 
 @main_bp.route('/')
+@login_required
 def index():
     """首页"""
-    if 'user_id' in session:
-        user = db.session.get(User, session['user_id'])
-        if not user:
-            flash('用户不存在！', 'error')
-            return redirect(url_for('auth.login'))
+    user = db.session.get(User, g.user_id)
+    if not user:
+        flash('用户不存在！', 'error')
+        return redirect(url_for('auth.login'))
 
-        # 生成订阅URL
-        subscription_url = None
-        if user.subscription_token:
-            subscription_url = url_for('subscription.subscription', token=user.subscription_token, _external=True)
-        elif user.email:
-            # 如果还没有Token，自动生成一个
-            user.generate_subscription_token()
-            db.session.commit()
-            subscription_url = url_for('subscription.subscription', token=user.subscription_token, _external=True)
+    # 生成订阅URL
+    subscription_url = None
+    if user.subscription_token:
+        subscription_url = url_for('subscription.subscription', token=user.subscription_token, _external=True)
+    elif user.email:
+        # 如果还没有Token，自动生成一个
+        user.generate_subscription_token()
+        db.session.commit()
+        subscription_url = url_for('subscription.subscription', token=user.subscription_token, _external=True)
 
-        # 获取用户套餐信息
-        package = None
-        if user.package_id:
-            package = db.session.get(Package, user.package_id)
+    # 获取用户套餐信息
+    package = None
+    if user.package_id:
+        package = db.session.get(Package, user.package_id)
 
-        # 首次加载时不获取节点信息，由前端异步加载
-        return render_template('index.html', user=user, nodes=None, subscription_url=subscription_url, package=package, now=datetime.now())
-    return redirect(url_for('auth.login'))
+    # 首次加载时不获取节点信息，由前端异步加载
+    return render_template('index.html', user=user, nodes=None, subscription_url=subscription_url, package=package, now=datetime.now())
 
 
 @main_bp.route('/refresh_token', methods=['POST'])
 @login_required
 def refresh_token():
     """刷新订阅Token"""
-    user = db.session.get(User, session['user_id'])
+    user = db.session.get(User, g.user_id)
     
     # 检查用户是否有套餐
     if not user.package_id: # type: ignore
@@ -68,7 +67,7 @@ def refresh_token():
 @login_required
 def nodes():
     """节点信息页面（管理员看所有节点，普通用户看套餐内节点）"""
-    user = db.session.get(User, session['user_id'])
+    user = db.session.get(User, g.user_id)
     if not user:
         flash('用户不存在！', 'error')
         return redirect(url_for('auth.login'))
@@ -80,7 +79,7 @@ def nodes():
 @login_required
 def get_inbounds():
     """API：获取节点信息（管理员获取所有节点，普通用户获取套餐内节点）"""
-    user = db.session.get(User, session['user_id'])
+    user = db.session.get(User, g.user_id)
     if not user:
         return jsonify({'error': '用户不存在'}), 404
     
