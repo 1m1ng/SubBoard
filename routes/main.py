@@ -23,12 +23,12 @@ def index():
     # 生成订阅URL
     subscription_url = None
     if user.subscription_token:
-        subscription_url = url_for('subscription.subscription', token=user.subscription_token, _external=True)
+        subscription_url = url_for('subscription.subscription', token=user.subscription_token, _external=True, _scheme='https')
     elif user.email:
         # 如果还没有Token，自动生成一个
         user.generate_subscription_token()
         db.session.commit()
-        subscription_url = url_for('subscription.subscription', token=user.subscription_token, _external=True)
+        subscription_url = url_for('subscription.subscription', token=user.subscription_token, _external=True, _scheme='https')
 
     # 获取用户套餐信息
     package = None
