@@ -10,7 +10,7 @@
 <div class="nodes-container">
     <div class="nodes-header">
         <h2>节点信息</h2>
-        {% if session.get('is_admin') %}
+        {% if is_admin %}
             <span class="badge badge-admin">管理员视图 - 所有节点</span>
         {% endif %}
         <button id="refreshBtn" class="btn btn-primary">
@@ -24,7 +24,7 @@
     </div>
 
     <!-- 套餐信息提示（普通用户） -->
-    {% if not session.get('is_admin') %}
+    {% if not is_admin %}
     <div id="packageInfo" class="package-info-banner" style="display: none;">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>

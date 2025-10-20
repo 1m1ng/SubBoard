@@ -7,6 +7,7 @@ from extensions import db, logger
 from config import config
 from models import User
 from utils import generate_random_password, register_template_filters
+from utils.context_processors import register_context_processors
 from routes import auth_bp, admin_bp, subscription_bp, servers_bp, mihomo_bp, main_bp, packages_bp
 from scheduler import init_scheduler, get_scheduler
 
@@ -31,6 +32,7 @@ def create_app(config_name='default'):
     
     # 注册模板过滤器和上下文处理器
     register_template_filters(app)
+    register_context_processors(app)
     
     # 注册蓝图
     app.register_blueprint(main_bp)

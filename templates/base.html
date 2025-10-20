@@ -26,7 +26,7 @@
 
         <!-- 侧边栏菜单 -->
         <nav class="sidebar-nav">
-            {% if session.get('user_id') %}
+            {% if is_authenticated %}
                 <a href="{{ url_for('main.index') }}" class="sidebar-item" title="首页">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -34,7 +34,7 @@
                     </svg>
                     <span class="sidebar-text">首页</span>
                 </a>
-                {% if session.get('is_admin') %}
+                {% if is_admin %}
                     <a href="{{ url_for('admin.admin') }}" class="sidebar-item" title="用户管理">
                         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>

@@ -83,7 +83,6 @@ def logout():
         # 撤销token
         revoke_token(token)
     
-    flash('您已成功登出！', 'success')
     logger.info(f'用户 {username} 已登出')
     
     # 创建响应并删除cookie

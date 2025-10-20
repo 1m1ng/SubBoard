@@ -18,7 +18,7 @@
                 <div class="avatar-status"></div>
             </div>
             <h3 class="profile-username">{{ user.username }}</h3>
-            {% if session.get('is_admin') %}
+            {% if is_admin %}
             <span class="badge badge-admin">管理员</span>
             {% else %}
             <span class="badge badge-user">普通用户</span>
