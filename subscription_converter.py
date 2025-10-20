@@ -222,30 +222,40 @@ def parse_subscription_urls(content: str) -> List[Dict]:
     # 解码 base64（如果需要）
     try:
         decoded = base64.b64decode(content).decode('utf-8')
-    except:
+        logger.info(f"成功解码订阅内容，长度: {len(decoded)} 字符")
+    except Exception as e:
+        logger.warning(f"Base64 解码失败，尝试直接使用原始内容: {str(e)}")
         decoded = content
     
     # 按行分割
     lines = decoded.strip().split('\n')
+    logger.info(f"订阅内容共 {len(lines)} 行")
     
-    for line in lines:
+    for idx, line in enumerate(lines, 1):
         line = line.strip()
         if not line:
             continue
         
         proxy = None
-        if line.startswith('vless://'):
-            proxy = parse_vless_url(line)
-        elif line.startswith('ss://'):
-            proxy = parse_ss_url(line)
-        elif line.startswith('vmess://'):
-            proxy = parse_vmess_url(line)
-        elif line.startswith('trojan://'):
-            proxy = parse_trojan_url(line)
+        try:
+            if line.startswith('vless://'):
+                proxy = parse_vless_url(line)
+            elif line.startswith('ss://'):
+                proxy = parse_ss_url(line)
+            elif line.startswith('vmess://'):
+                proxy = parse_vmess_url(line)
+            elif line.startswith('trojan://'):
+                proxy = parse_trojan_url(line)
+            else:
+                logger.warning(f"第 {idx} 行: 未知的代理协议: {line[:20]}...")
+        except Exception as e:
+            logger.error(f"第 {idx} 行: 解析代理失败: {str(e)}")
         
         if proxy:
             proxies.append(proxy)
+            logger.debug(f"第 {idx} 行: 成功解析 {proxy.get('type')} 代理: {proxy.get('name')}")
     
+    logger.info(f"成功解析 {len(proxies)} 个代理配置")
     return proxies
 
 
@@ -254,34 +264,55 @@ def generate_mihomo_config(proxies: List[Dict], template: str) -> str:
     import yaml
     
     try:
+        logger.info(f"开始生成 Mihomo 配置，代理数量: {len(proxies)}")
+        
         # 解析模板
-        config = yaml.safe_load(template)
+        try:
+            config = yaml.safe_load(template)
+            logger.info("成功解析模板 YAML")
+        except yaml.YAMLError as e:
+            logger.error(f"模板 YAML 解析失败: {str(e)}")
+            raise ValueError(f"模板格式错误: {str(e)}")
+        
+        if not isinstance(config, dict):
+            raise ValueError("模板必须是一个 YAML 字典")
         
         # 添加代理列表
         config['proxies'] = proxies
+        logger.info(f"已添加 {len(proxies)} 个代理到配置")
         
         # 转换为 YAML 字符串
         result = yaml.dump(config, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        logger.info(f"成功生成 Mihomo 配置，长度: {len(result)} 字符")
         
         return result
     except Exception as e:
-        logger.error(f"生成 Mihomo 配置失败: {str(e)}")
+        logger.error(f"生成 Mihomo 配置失败: {str(e)}", exc_info=True)
         raise
 
 
 def convert_to_mihomo_yaml(base64_content: str, template: str) -> str:
     """将 base64 订阅内容转换为 Mihomo YAML 格式"""
     try:
+        logger.info("开始转换订阅内容为 Mihomo YAML 格式")
+        
         # 解析代理列表
         proxies = parse_subscription_urls(base64_content)
         
         if not proxies:
+            logger.error("没有找到有效的代理配置")
             raise ValueError("没有找到有效的代理配置")
+        
+        logger.info(f"成功解析 {len(proxies)} 个代理")
         
         # 生成配置
         config = generate_mihomo_config(proxies, template)
         
+        if not config:
+            raise ValueError("生成的配置为空")
+        
+        logger.info("成功转换为 Mihomo YAML 配置")
         return config
     except Exception as e:
-        logger.error(f"转换 Mihomo 配置失败: {str(e)}")
+        logger.error(f"转换 Mihomo 配置失败: {str(e)}", exc_info=True)
         raise

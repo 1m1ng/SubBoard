@@ -2,6 +2,10 @@
 
 {% block title %}Mihomo 模板管理 - SubBoard{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='mihomo.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="admin-container">
     <h2>⚙️ Mihomo 配置模板管理</h2>

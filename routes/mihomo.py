@@ -3,18 +3,16 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from datetime import datetime
 from extensions import db, logger
 from models import MihomoTemplate
+from utils.decorators import admin_required
 import yaml
 
 mihomo_bp = Blueprint('mihomo', __name__, url_prefix='/mihomo_template')
 
 
 @mihomo_bp.route('/')
+@admin_required
 def mihomo_template():
     """Mihomo 模板管理页面"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以访问此页面！', 'error')
-        return redirect(url_for('main.index'))
-    
     # 获取所有模板
     templates = MihomoTemplate.query.all()
     active_template = MihomoTemplate.query.filter_by(is_active=True).first()
@@ -23,12 +21,9 @@ def mihomo_template():
 
 
 @mihomo_bp.route('/save', methods=['POST'])
+@admin_required
 def save_mihomo_template():
     """保存 Mihomo 模板"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以保存模板！', 'error')
-        return redirect(url_for('main.index'))
-    
     name = request.form.get('name', '默认模板')
     template_content = request.form.get('template_content')
     set_active = request.form.get('set_active') == 'true'
@@ -58,11 +53,7 @@ def save_mihomo_template():
             template.updated_at = datetime.utcnow()
         else:
             # 创建新模板
-            template = MihomoTemplate(
-                name=name,
-                template_content=template_content,
-                is_active=set_active
-            )
+            template = MihomoTemplate(name=name, template_content=template_content, is_active=set_active)  # type: ignore
             db.session.add(template)
         
         db.session.commit()
@@ -77,12 +68,9 @@ def save_mihomo_template():
 
 
 @mihomo_bp.route('/delete/<int:template_id>')
+@admin_required
 def delete_mihomo_template(template_id):
     """删除 Mihomo 模板"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以删除模板！', 'error')
-        return redirect(url_for('main.index'))
-    
     template = db.session.get(MihomoTemplate, template_id)
     if not template:
         flash('模板不存在！', 'error')
@@ -102,12 +90,9 @@ def delete_mihomo_template(template_id):
 
 
 @mihomo_bp.route('/set_active/<int:template_id>')
+@admin_required
 def set_active_template(template_id):
     """设置活动模板"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以设置活动模板！', 'error')
-        return redirect(url_for('main.index'))
-    
     try:
         # 取消所有模板的活动状态
         MihomoTemplate.query.update({MihomoTemplate.is_active: False})
@@ -130,11 +115,9 @@ def set_active_template(template_id):
 
 
 @mihomo_bp.route('/validate', methods=['POST'])
+@admin_required
 def validate_yaml():
     """验证 YAML 格式的 API"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        return {'valid': False, 'error': '未授权'}, 403
-    
     try:
         data = request.get_json()
         content = data.get('content', '')

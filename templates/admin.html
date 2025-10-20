@@ -2,6 +2,10 @@
 
 {% block title %}用户管理 - SubBoard{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="admin-container">
     <h2>用户管理面板</h2>
@@ -32,6 +36,28 @@
                     </label>
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="package_id">套餐</label>
+                    <select id="package_id" name="package_id">
+                        <option value="">无套餐</option>
+                        {% for package in packages %}
+                        <option value="{{ package.id }}">{{ package.name }} ({{ (package.total_traffic / 1024 / 1024 / 1024) | round(2) }} GB)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="package_expire_time">套餐到期时间</label>
+                    <input type="datetime-local" id="package_expire_time" name="package_expire_time">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="next_reset_time">下一次流量重置时间</label>
+                    <input type="datetime-local" id="next_reset_time" name="next_reset_time">
+                    <small style="color: #718096; font-size: 0.85rem;">留空则按套餐到期时间的月份和日期计算</small>
+                </div>
+            </div>
             <button type="submit" class="btn btn-primary">创建用户</button>
         </form>
     </div>
@@ -46,6 +72,8 @@
                         <th>ID</th>
                         <th>用户名</th>
                         <th>邮箱</th>
+                        <th>套餐</th>
+                        <th>套餐到期</th>
                         <th>权限</th>
                         <th>注册时间</th>
                         <th>操作</th>
@@ -58,6 +86,20 @@
                         <td>{{ user.username }}</td>
                         <td>{{ user.email }}</td>
                         <td>
+                            {% if user.package %}
+                                <span class="badge badge-success">{{ user.package.name }}</span>
+                            {% else %}
+                                <span class="badge badge-secondary">无套餐</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.package_expire_time %}
+                                {{ user.package_expire_time.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if user.is_admin %}
                                 <span class="badge badge-admin">管理员</span>
                             {% else %}
@@ -66,7 +108,7 @@
                         </td>
                         <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>
-                            <button class="btn-small btn-primary" onclick="editUser({{ user.id }}, '{{ user.username }}', '{{ user.email }}', {{ user.is_admin|lower }})">编辑</button>
+                            <button class="btn-small btn-primary" onclick="editUser({{ user.id }}, '{{ user.username }}', '{{ user.email }}', {{ user.is_admin|lower }}, {{ user.package_id if user.package_id else 'null' }}, '{{ user.package_expire_time.strftime('%Y-%m-%dT%H:%M') if user.package_expire_time else '' }}', '{{ user.next_reset_time.strftime('%Y-%m-%dT%H:%M') if user.next_reset_time else '' }}')">编辑</button>
                             <button class="btn-small btn-danger" onclick="if(confirm('确定要删除用户 {{ user.username }} 吗？')) { window.location.href='{{ url_for('admin.delete_user', user_id=user.id) }}'; }">删除</button>
                         </td>
                     </tr>
@@ -125,23 +167,49 @@
         <span class="close" onclick="closeEditModal()">&times;</span>
         <h3>编辑用户</h3>
         <form id="editUserForm" method="POST" action="">
-            <div class="form-group">
-                <label for="edit_username">用户名</label>
-                <input type="text" id="edit_username" name="username" required>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_username">用户名</label>
+                    <input type="text" id="edit_username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_email">邮箱</label>
+                    <input type="email" id="edit_email" name="email" required>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="edit_email">邮箱</label>
-                <input type="email" id="edit_email" name="email" required>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_password">新密码（留空则不修改）</label>
+                    <input type="password" id="edit_password" name="password" minlength="6">
+                </div>
+                <div class="form-group checkbox-group" style="align-self: flex-end;">
+                    <label>
+                        <input type="checkbox" id="edit_is_admin" name="is_admin">
+                        <span>管理员权限</span>
+                    </label>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="edit_password">新密码（留空则不修改）</label>
-                <input type="password" id="edit_password" name="password" minlength="6">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_package_id">套餐</label>
+                    <select id="edit_package_id" name="package_id">
+                        <option value="">无套餐</option>
+                        {% for package in packages %}
+                        <option value="{{ package.id }}">{{ package.name }} ({{ (package.total_traffic / 1024 / 1024 / 1024) | round(2) }} GB)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit_package_expire_time">套餐到期时间</label>
+                    <input type="datetime-local" id="edit_package_expire_time" name="package_expire_time">
+                </div>
             </div>
-            <div class="form-group checkbox-group">
-                <label>
-                    <input type="checkbox" id="edit_is_admin" name="is_admin">
-                    <span>管理员权限</span>
-                </label>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_next_reset_time">下一次流量重置时间</label>
+                    <input type="datetime-local" id="edit_next_reset_time" name="next_reset_time">
+                    <small style="color: #718096; font-size: 0.85rem;">留空则按套餐到期时间的月份和日期计算</small>
+                </div>
             </div>
             <div class="modal-actions">
                 <button type="submit" class="btn btn-primary">保存修改</button>
@@ -152,11 +220,14 @@
 </div>
 
 <script>
-function editUser(userId, username, email, isAdmin) {
+function editUser(userId, username, email, isAdmin, packageId, packageExpireTime, nextResetTime) {
     document.getElementById('edit_username').value = username;
     document.getElementById('edit_email').value = email;
     document.getElementById('edit_password').value = '';
     document.getElementById('edit_is_admin').checked = isAdmin;
+    document.getElementById('edit_package_id').value = packageId || '';
+    document.getElementById('edit_package_expire_time').value = packageExpireTime || '';
+    document.getElementById('edit_next_reset_time').value = nextResetTime || '';
     document.getElementById('editUserForm').action = `/admin/edit_user/${userId}`;
     document.getElementById('editUserModal').style.display = 'block';
 }

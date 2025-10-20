@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}套餐管理 - SubBoard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='packages.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h2>流量套餐管理</h2>
+    
+    <!-- 创建套餐表单 -->
+    <div class="admin-section">
+        <h3>创建新套餐</h3>
+        <form method="POST" action="{{ url_for('packages.create_package') }}" class="admin-form" id="createPackageForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="name">套餐名称</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="total_traffic">总流量 (GB)</label>
+                    <input type="number" id="total_traffic" name="total_traffic" required min="1" step="1">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>可用节点</label>
+                <div class="nodes-selection">
+                    {% for server in servers %}
+                    <div class="server-group">
+                        <div class="server-header" onclick="toggleServerNodes('create', '{{ server.board_name }}')">
+                            <span class="server-name">📡 {{ server.board_name }}</span>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="nodes-list" id="create_nodes_{{ server.board_name }}" style="display: none;">
+                            <div class="loading-text">加载中...</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">创建套餐</button>
+        </form>
+    </div>
+
+    <!-- 套餐列表 -->
+    <div class="admin-section">
+        <h3>套餐列表 ({{ packages|length }} 个套餐)</h3>
+        {% if packages %}
+        <div class="table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>套餐名称</th>
+                        <th>总流量</th>
+                        <th>可用节点数</th>
+                        <th>使用用户数</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for package in packages %}
+                    <tr>
+                        <td>{{ package.id }}</td>
+                        <td>{{ package.name }}</td>
+                        <td>{{ (package.total_traffic / 1024 / 1024 / 1024) | round(2) }} GB</td>
+                        <td>{{ package.nodes|length }}</td>
+                        <td>{{ package.users_count }}</td>
+                        <td>{{ package.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <button class="btn-small btn-primary" onclick='editPackage({{ package.id }}, "{{ package.name }}", {{ (package.total_traffic / 1024 / 1024 / 1024) | round(2) }}, {{ package.nodes | tojson }})'>编辑</button>
+                            <button class="btn-small btn-danger" onclick="if(confirm('确定要删除套餐 {{ package.name }} 吗？')) { window.location.href='{{ url_for('packages.delete_package', package_id=package.id) }}'; }">删除</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">暂无套餐</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 编辑套餐模态框 -->
+<div id="editPackageModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h3>编辑套餐</h3>
+        <form id="editPackageForm" method="POST" action="">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_name">套餐名称</label>
+                    <input type="text" id="edit_name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_total_traffic">总流量 (GB)</label>
+                    <input type="number" id="edit_total_traffic" name="total_traffic" required min="1" step="1">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>可用节点</label>
+                <div class="nodes-selection">
+                    {% for server in servers %}
+                    <div class="server-group">
+                        <div class="server-header" onclick="toggleServerNodes('edit', '{{ server.board_name }}')">
+                            <span class="server-name">📡 {{ server.board_name }}</span>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="nodes-list" id="edit_nodes_{{ server.board_name }}" style="display: none;">
+                            <div class="loading-text">加载中...</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">保存修改</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// 存储已加载的节点数据
+const nodesCache = {};
+const loadedServers = {};
+
+// 切换服务器节点显示
+async function toggleServerNodes(formType, boardName) {
+    const nodesList = document.getElementById(`${formType}_nodes_${boardName}`);
+    const serverGroup = nodesList.closest('.server-group');
+    const toggleIcon = serverGroup.querySelector('.toggle-icon');
+    
+    if (nodesList.style.display === 'none') {
+        nodesList.style.display = 'block';
+        toggleIcon.textContent = '▲';
+        
+        // 如果还没有加载过节点，则加载
+        if (!loadedServers[`${formType}_${boardName}`]) {
+            await loadNodes(formType, boardName);
+            loadedServers[`${formType}_${boardName}`] = true;
+        }
+    } else {
+        nodesList.style.display = 'none';
+        toggleIcon.textContent = '▼';
+    }
+}
+
+// 加载节点列表
+async function loadNodes(formType, boardName) {
+    const nodesList = document.getElementById(`${formType}_nodes_${boardName}`);
+    
+    try {
+        const response = await fetch(`/packages/get_nodes/${boardName}`);
+        const data = await response.json();
+        
+        if (data.success && data.nodes && data.nodes.length > 0) {
+            // 缓存节点数据
+            if (!nodesCache[boardName]) {
+                nodesCache[boardName] = data.nodes;
+            }
+            
+            let html = '';
+            data.nodes.forEach(node => {
+                const nodeId = `${boardName}|${node.id}|${node.name}`;
+                const rateInputId = `rate_${boardName}_${node.name}`.replace(/[^a-zA-Z0-9_]/g, '_');
+                html += `
+                    <div class="node-item">
+                        <label class="node-checkbox">
+                            <input type="checkbox" name="nodes[]" value="${nodeId}">
+                            <span class="node-name">${node.name}</span>
+                        </label>
+                        <div class="rate-input">
+                            <label>倍率:</label>
+                            <input type="number" name="rate_${boardName}_${node.name}" 
+                                   id="${rateInputId}" value="1.0" min="0.1" step="0.1" 
+                                   class="rate-field">
+                        </div>
+                    </div>
+                `;
+            });
+            nodesList.innerHTML = html;
+        } else {
+            nodesList.innerHTML = '<div class="no-data">该服务器暂无节点</div>';
+        }
+    } catch (error) {
+        console.error('加载节点失败:', error);
+        nodesList.innerHTML = '<div class="error-text">加载失败</div>';
+    }
+}
+
+// 编辑套餐
+async function editPackage(packageId, name, totalTraffic, nodes) {
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_total_traffic').value = totalTraffic;
+    document.getElementById('editPackageForm').action = `/packages/edit/${packageId}`;
+    
+    // 重置所有节点选择
+    const allCheckboxes = document.querySelectorAll('#editPackageModal input[name="nodes[]"]');
+    allCheckboxes.forEach(cb => cb.checked = false);
+    
+    // 重置所有倍率
+    const allRates = document.querySelectorAll('#editPackageModal .rate-field');
+    allRates.forEach(rate => rate.value = '1.0');
+    
+    // 展开并加载所有服务器的节点
+    const servers = {{ servers | map(attribute='board_name') | list | tojson }};
+    for (const boardName of servers) {
+        const nodesList = document.getElementById(`edit_nodes_${boardName}`);
+        const serverGroup = nodesList.closest('.server-group');
+        const toggleIcon = serverGroup.querySelector('.toggle-icon');
+        
+        nodesList.style.display = 'block';
+        toggleIcon.textContent = '▲';
+        
+        if (!loadedServers[`edit_${boardName}`]) {
+            await loadNodes('edit', boardName);
+            loadedServers[`edit_${boardName}`] = true;
+        }
+    }
+    
+    // 等待一小段时间确保DOM已更新
+    setTimeout(() => {
+        // 设置已选择的节点
+        nodes.forEach(node => {
+            const nodeId = `${node.board_name}|${node.inbound_id}|${node.node_name}`;
+            const checkbox = document.querySelector(`#editPackageModal input[name="nodes[]"][value="${nodeId}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+            
+            // 设置倍率
+            const rateInputName = `rate_${node.board_name}_${node.node_name}`;
+            const rateInput = document.querySelector(`#editPackageModal input[name="${rateInputName}"]`);
+            if (rateInput) {
+                rateInput.value = node.traffic_rate;
+            }
+        });
+    }, 100);
+    
+    document.getElementById('editPackageModal').style.display = 'block';
+}
+
+// 关闭编辑模态框
+function closeEditModal() {
+    document.getElementById('editPackageModal').style.display = 'none';
+}
+
+// 点击模态框外部关闭
+window.onclick = function(event) {
+    const modal = document.getElementById('editPackageModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,309 @@
+/* ================================
+   Dashboard 页面样式
+   ================================ */
+
+.dashboard-container {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.dashboard-header h1 {
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 2.5rem;
+}
+
+.welcome-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+}
+
+/* 套餐信息卡片 */
+.package-info-card {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    margin-bottom: 2rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.package-info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.package-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.package-header svg {
+    color: #4f46e5;
+}
+
+.package-header h2 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.package-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.detail-label svg {
+    color: #94a3b8;
+}
+
+.detail-value {
+    color: #1e293b;
+    font-size: 1.1rem;
+    font-weight: 500;
+    padding-left: 1.75rem;
+}
+
+/* 流量信息 */
+.traffic-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-left: 1.75rem;
+}
+
+.traffic-text {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.traffic-text .used {
+    color: #4f46e5;
+    font-weight: 600;
+    font-size: 1.3rem;
+}
+
+.traffic-text .separator {
+    color: #94a3b8;
+}
+
+.traffic-text .total {
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* 进度条 */
+.progress-bar {
+    width: 100%;
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.6s ease, background 0.3s;
+}
+
+.progress-fill.normal {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.progress-fill.warning {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.progress-fill.danger {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.traffic-percentage {
+    color: #64748b;
+    font-size: 0.85rem;
+    text-align: right;
+}
+
+/* 无套餐提示 */
+.no-package {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+}
+
+.no-package svg {
+    color: #cbd5e1;
+    margin-bottom: 1rem;
+}
+
+.no-package h3 {
+    color: #475569;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+}
+
+.no-package p {
+    color: #94a3b8;
+    font-size: 0.95rem;
+}
+
+.empty-state, .setup-prompt {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 3rem;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.empty-state svg, .setup-prompt svg {
+    color: #ccc;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3, .setup-prompt h3 {
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p, .setup-prompt p {
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+
+.dashboard-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.dashboard-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.subscription-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.subscription-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.subscription-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.btn-warning:hover {
+    box-shadow: 0 8px 20px rgba(245, 87, 108, 0.4);
+}
+
+/* Dashboard 响应式 */
+@media (max-width: 768px) {
+    .dashboard-header h1 {
+        font-size: 1.8rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .dashboard-actions {
+        flex-direction: column;
+    }
+    
+    .dashboard-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .package-info-card {
+        padding: 1.5rem;
+    }
+
+    .package-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .traffic-text {
+        flex-wrap: wrap;
+    }
+
+    .subscription-actions {
+        flex-direction: column;
+    }
+
+    .subscription-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+

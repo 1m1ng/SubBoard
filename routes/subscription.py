@@ -3,6 +3,7 @@ from flask import Blueprint, request, Response
 from extensions import logger
 from models import User
 from utils.xui import get_xui_manager
+from datetime import datetime
 
 subscription_bp = Blueprint('subscription', __name__)
 
@@ -23,12 +24,20 @@ def subscription():
     if not user.email:
         return Response('No email configured', status=400)
     
+    # 检查用户是否有套餐
+    if not user.package_id:
+        return Response('No package assigned', status=403)
+    
+    # 检查套餐是否过期
+    if not user.package_expire_time or user.package_expire_time <= datetime.now():
+        return Response('Package expired', status=403)
+    
     manager = get_xui_manager()
     if not manager:
         return Response('Service unavailable', status=503)
     
-    # 获取聚合订阅
-    result = manager.get_aggregated_subscription(user.email)
+    # 获取聚合订阅（使用email作为标识，并传递user对象以获取套餐信息）
+    result = manager.get_aggregated_subscription(user.email, user=user)
     if not result:
         return Response('No subscription data found', status=404)
     
@@ -50,13 +59,20 @@ def subscription():
             template = MihomoTemplate.query.filter_by(is_active=True).first()
             if not template:
                 # 如果没有活动模板，返回错误
-                return Response('No active Mihomo template configured', status=500)
+                logger.error(f'用户 {user.username} 请求 Mihomo 订阅但没有配置活动模板')
+                return Response('No active Mihomo template configured. Please contact administrator.', status=500)
+            
+            logger.info(f'用户 {user.username} 使用模板 {template.name} 转换 Mihomo 配置')
             
             # 转换为 Mihomo 配置
             mihomo_config = convert_to_mihomo_yaml(base64_content, template.template_content)
             
+            if not mihomo_config:
+                logger.error(f'用户 {user.username} Mihomo 配置转换结果为空')
+                return Response('Failed to convert subscription: empty result', status=500)
+            
             # 返回 YAML 配置
-            response = Response(mihomo_config, mimetype='text/yaml')
+            response = Response(mihomo_config, mimetype='text/yaml; charset=utf-8')
             response.headers['Subscription-Userinfo'] = (
                 f"upload={traffic_info['upload']}; "
                 f"download={traffic_info['download']}; "
@@ -64,12 +80,13 @@ def subscription():
                 f"expire={traffic_info['expire']}"
             )
             response.headers['Profile-Update-Interval'] = '24'
+            response.headers['Content-Disposition'] = 'attachment; filename=config.yaml'
             
-            logger.info(f'用户 {user.username} 获取了 Mihomo 订阅')
+            logger.info(f'用户 {user.username} 成功获取了 Mihomo 订阅')
             return response
             
         except Exception as e:
-            logger.error(f'转换 Mihomo 配置失败: {str(e)}')
+            logger.error(f'用户 {user.username} 转换 Mihomo 配置失败: {str(e)}', exc_info=True)
             return Response(f'Failed to convert subscription: {str(e)}', status=500)
     
     else:

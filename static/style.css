@@ -588,6 +588,25 @@ footer p {
     font-weight: 600;
 }
 
+/* ================================
+   通用动画
+   ================================ */
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ================================
+   管理员页面通用布局
+   ================================ */
+
 /* 管理员容器 */
 .admin-container {
     max-width: 100%;
@@ -632,23 +651,64 @@ footer p {
     font-size: 1.3rem;
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 /* 管理员表单 */
 .admin-form {
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
+
+/* 管理员表格 */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table thead {
+    background: #f7fafc;
+}
+
+.admin-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #2d3748;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.admin-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    color: #4a5568;
+}
+
+.admin-table tbody tr {
+    animation: fadeIn 0.3s ease-out;
+    transition: background-color 0.2s ease;
+}
+
+.admin-table tbody tr:hover {
+    background: #f7fafc;
+}
+
+/* 表格内按钮样式优化 - 防止高度变化 */
+.admin-table .btn-small:hover,
+.admin-table .btn-primary:hover,
+.admin-table .btn-danger:hover,
+.admin-table .btn-success:hover,
+.admin-table .btn-warning:hover {
+    transform: none;
+}
+
+.admin-table input:focus,
+.admin-table select:focus,
+.admin-table textarea:focus {
+    transform: none;
+}
+
+/* ================================
+   表单通用样式
+   ================================ */
 
 .form-row {
     display: grid;
@@ -709,6 +769,10 @@ footer p {
     color: #555;
 }
 
+/* ================================
+   表格通用样式
+   ================================ */
+
 /* 表格容器 */
 .table-container {
     overflow-x: auto;
@@ -749,52 +813,9 @@ footer p {
     }
 }
 
-.admin-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.admin-table thead {
-    background: #f7fafc;
-}
-
-.admin-table th {
-    padding: 1rem;
-    text-align: left;
-    font-weight: 600;
-    color: #2d3748;
-    border-bottom: 2px solid #e2e8f0;
-}
-
-.admin-table td {
-    padding: 1rem;
-    border-bottom: 1px solid #e2e8f0;
-    color: #4a5568;
-}
-
-.admin-table tbody tr {
-    animation: fadeIn 0.3s ease-out;
-    transition: background-color 0.2s ease;
-}
-
-.admin-table tbody tr:hover {
-    background: #f7fafc;
-}
-
-/* 表格内按钮样式优化 - 防止高度变化 */
-.admin-table .btn-small:hover,
-.admin-table .btn-primary:hover,
-.admin-table .btn-danger:hover,
-.admin-table .btn-success:hover,
-.admin-table .btn-warning:hover {
-    transform: none;
-}
-
-.admin-table input:focus,
-.admin-table select:focus,
-.admin-table textarea:focus {
-    transform: none;
-}
+/* ================================
+   徽章样式
+   ================================ */
 
 /* 徽章 */
 .badge {
@@ -823,6 +844,10 @@ footer p {
     color: white;
     box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
 }
+
+/* ================================
+   按钮样式
+   ================================ */
 
 /* 小按钮 */
 .btn-small {
@@ -1388,7 +1413,28 @@ footer p {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-/* 响应式设计 */
+/* ================================
+   响应式设计
+   ================================ */
+
+/* 中等屏幕 (平板) */
+@media (max-width: 1024px) {
+    .admin-container h2 {
+        font-size: 1.75rem;
+    }
+    
+    .admin-section {
+        padding: 1.5rem;
+    }
+    
+    .admin-table th,
+    .admin-table td {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* 小屏幕 (手机) */
 @media (max-width: 768px) {
     .form-container,
     .welcome-container {
@@ -1448,13 +1494,42 @@ footer p {
         grid-template-columns: 1fr;
     }
 
+    /* 管理员页面响应式 */
+    .admin-container h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .admin-section {
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .admin-section h3 {
+        font-size: 1.1rem;
+    }
+
     .admin-table {
         font-size: 0.85rem;
+        min-width: 600px;
     }
 
     .admin-table th,
     .admin-table td {
-        padding: 0.75rem 0.5rem;
+        padding: 0.5rem;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    /* 按钮组在移动端堆叠 */
+    .admin-table td .btn-small {
+        display: block;
+        margin-bottom: 0.25rem;
+        width: 100%;
+    }
+    
+    .admin-table td .btn-small:last-child {
+        margin-bottom: 0;
     }
 
     .security-tip {
@@ -1467,312 +1542,25 @@ footer p {
     }
 }
 
-/* Dashboard 样式 */
-.dashboard-container {
-    max-width: 100%;
-    margin: 0;
-    padding: 0;
-    animation: fadeInUp 0.5s ease-out;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.dashboard-header {
-    text-align: center;
-    margin-bottom: 3rem;
-}
-
-.dashboard-header h1 {
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
-    font-size: 2.5rem;
-}
-
-.welcome-subtitle {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 1.1rem;
-}
-
-.section-title {
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
-}
-
-.nodes-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 1.5rem;
-}
-
-.node-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.node-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-}
-
-.node-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.node-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    flex-shrink: 0;
-}
-
-.node-flag {
-    background: #ffffff;
-    border: 2px solid #e0e0e0;
-    overflow: hidden;
-    padding: 0;
-}
-
-.flag-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    border-radius: 10px;
-}
-
-.node-info {
-    flex: 1;
-}
-
-.node-name {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 0.25rem;
-}
-
-.node-server {
-    color: #888;
-    font-size: 0.9rem;
-}
-
-.node-status {
-    flex-shrink: 0;
-}
-
-.status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.status-active {
-    background: #d4edda;
-    color: #155724;
-}
-
-.status-inactive {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.node-traffic {
-    margin-bottom: 1.5rem;
-}
-
-.traffic-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-.traffic-label {
-    font-weight: 600;
-    color: #555;
-}
-
-.traffic-value {
-    color: #333;
-    font-size: 0.95rem;
-}
-
-.traffic-bar {
-    height: 8px;
-    background: #e0e0e0;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 0.75rem;
-}
-
-.traffic-bar-fill {
-    height: 100%;
-    transition: width 0.5s ease;
-    border-radius: 4px;
-}
-
-.traffic-details {
-    display: flex;
-    gap: 1.5rem;
-    font-size: 0.85rem;
-    color: #666;
-}
-
-.traffic-item {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.node-expiry {
-    padding-top: 1rem;
-    border-top: 1px solid #f0f0f0;
-}
-
-.expiry-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #555;
-    margin-bottom: 0.5rem;
-}
-
-.expiry-text {
-    font-size: 0.95rem;
-}
-
-.days-left {
-    color: #28a745;
-    font-weight: 600;
-}
-
-.expired {
-    color: #dc3545;
-    font-weight: 600;
-}
-
-.reset-info {
-    color: #888;
-    font-size: 0.85rem;
-    margin-left: 1.5rem;
-}
-
-.empty-state, .setup-prompt {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    padding: 3rem;
-    text-align: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-
-.empty-state svg, .setup-prompt svg {
-    color: #ccc;
-    margin-bottom: 1rem;
-}
-
-.empty-state h3, .setup-prompt h3 {
-    color: #333;
-    margin-bottom: 0.5rem;
-}
-
-.empty-state p, .setup-prompt p {
-    color: #666;
-    margin-bottom: 1.5rem;
-}
-
-.dashboard-actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 2rem;
-}
-
-.dashboard-actions .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.subscription-actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    flex-wrap: wrap;
-}
-
-.subscription-actions .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: all 0.3s;
-}
-
-.btn-warning {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-}
-
-.btn-warning:hover {
-    box-shadow: 0 8px 20px rgba(245, 87, 108, 0.4);
-}
-
-/* Dashboard 响应式 */
-@media (max-width: 768px) {
-    .nodes-grid {
-        grid-template-columns: 1fr;
+/* 超小屏幕 (小手机) */
+@media (max-width: 480px) {
+    .admin-container h2 {
+        font-size: 1.25rem;
     }
     
-    .dashboard-header h1 {
-        font-size: 1.8rem;
-        flex-direction: column;
-        gap: 0.5rem;
+    .admin-section {
+        padding: 1rem;
+        border-radius: 8px;
     }
     
-    .dashboard-actions {
-        flex-direction: column;
-    }
-    
-    .dashboard-actions .btn {
-        width: 100%;
-        justify-content: center;
+    .admin-table {
+        font-size: 0.8rem;
     }
 }
+
+/* ================================
+   滚动效果
+   ================================ */
 
 /* 平滑滚动 */
 html {
@@ -1849,261 +1637,6 @@ html {
 
 .zoom-in {
     animation: zoomIn 0.5s ease-out;
-}
-
-/* Mihomo 模板管理页面样式 */
-.yaml-editor-wrapper {
-    position: relative;
-    margin-bottom: 1rem;
-}
-
-.yaml-editor {
-    width: 100%;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    padding: 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    background: #f8f9fa;
-    color: #333;
-    resize: vertical;
-    transition: all 0.3s ease;
-}
-
-.yaml-editor:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    background: white;
-}
-
-.editor-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.info-box {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 8px;
-    border-left: 4px solid #667eea;
-}
-
-.info-box h4 {
-    color: #2d3748;
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-}
-
-.info-box h4:first-child {
-    margin-top: 0;
-}
-
-.info-box p, .info-box ul {
-    color: #4a5568;
-    margin-bottom: 0.75rem;
-}
-
-.info-box ul {
-    padding-left: 1.5rem;
-}
-
-.info-box code {
-    background: #e2e8f0;
-    padding: 0.2rem 0.4rem;
-    border-radius: 3px;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 0.9em;
-    color: #667eea;
-}
-
-.actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-.actions .btn-small {
-    height: 32px;
-    min-height: 32px;
-    max-height: 32px;
-    padding: 0.4rem 0.8rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    line-height: 1;
-}
-
-/* 加载动画样式 */
-.loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 4rem 2rem;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    margin: 2rem 0;
-}
-
-.loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid #f3f4f6;
-    border-top-color: #667eea;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.loading-text {
-    margin-top: 1.5rem;
-    color: #667eea;
-    font-size: 1.1rem;
-    font-weight: 500;
-}
-
-/* 刷新按钮样式 */
-.section-title {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.btn-refresh {
-    background: rgba(102, 126, 234, 0.1);
-    border: 2px solid rgba(102, 126, 234, 0.3);
-    border-radius: 8px;
-    padding: 0.4rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: auto;
-}
-
-.btn-refresh:hover:not(:disabled) {
-    background: rgba(102, 126, 234, 0.2);
-    border-color: rgba(102, 126, 234, 0.5);
-    transform: scale(1.05);
-}
-
-.btn-refresh:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btn-refresh svg {
-    color: #667eea;
-    transition: transform 0.3s ease;
-}
-
-/* 错误消息样式 */
-.error-message {
-    text-align: center;
-    padding: 2rem;
-}
-
-.error-message svg {
-    color: #dc3545;
-    margin-bottom: 1rem;
-}
-
-.error-message p {
-    color: #6c757d;
-    margin-bottom: 1.5rem;
-    font-size: 1.1rem;
-}
-
-/* 空状态样式改进 */
-.empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    margin: 2rem 0;
-}
-
-.empty-state svg {
-    color: #cbd5e0;
-    margin-bottom: 1.5rem;
-}
-
-.empty-state p {
-    color: #718096;
-    font-size: 1.1rem;
-    margin-top: 0.5rem;
-}
-
-/* 节点详情样式 */
-.node-details {
-    padding: 1rem 0 0;
-    border-top: 1px solid #e2e8f0;
-}
-
-.detail-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0;
-    font-size: 0.95rem;
-}
-
-.detail-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #64748b;
-    font-weight: 500;
-}
-
-.detail-label svg {
-    width: 16px;
-    height: 16px;
-}
-
-.detail-value {
-    color: #1e293b;
-    font-weight: 600;
-}
-
-/* 进度条样式 */
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background: #e2e8f0;
-    border-radius: 4px;
-    overflow: hidden;
-    margin: 0.5rem 0;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    transition: width 0.3s ease;
-    border-radius: 4px;
-}
-
-.traffic-percentage {
-    display: block;
-    text-align: right;
-    font-size: 0.9rem;
-    color: #64748b;
-    margin-top: 0.25rem;
 }
 
 /* ================================
@@ -2647,3 +2180,4 @@ html {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     }
 }
+

@@ -3,18 +3,17 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from datetime import datetime
 from extensions import db, logger
 from models import ServerConfig
-from utils.xui import reload_xui_manager
+from utils.xui import reload_xui_manager, get_xui_manager
+from utils.cache import inbounds_cache
+from utils.decorators import admin_required
 
 servers_bp = Blueprint('servers', __name__, url_prefix='/servers')
 
 
 @servers_bp.route('/')
+@admin_required
 def servers():
     """服务器管理页面"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以访问此页面！', 'error')
-        return redirect(url_for('main.index'))
-    
     # 从数据库读取服务器配置
     server_configs = ServerConfig.query.all()
     boards = {server.board_name: server.to_dict() for server in server_configs}
@@ -23,11 +22,9 @@ def servers():
 
 
 @servers_bp.route('/add', methods=['POST'])
+@admin_required
 def add_server():
     """添加服务器"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以添加服务器！', 'error')
-        return redirect(url_for('main.index'))
     
     board_name = request.form.get('board_name')
     server = request.form.get('server')
@@ -54,15 +51,7 @@ def add_server():
         return redirect(url_for('servers.servers'))
     
     # 添加新服务器
-    new_server = ServerConfig(
-        board_name=board_name,
-        server=server,
-        port=port,
-        path=path,
-        sub_path=sub_path,
-        username=username,
-        password=password
-    )
+    new_server = ServerConfig(board_name=board_name, server=server, port=port, path=path, sub_path=sub_path, username=username, password=password)  # type: ignore
     
     try:
         db.session.add(new_server)
@@ -70,6 +59,15 @@ def add_server():
         
         # 重新加载配置
         reload_xui_manager()
+        
+        # 刷新入站列表缓存
+        logger.info(f'服务器添加后刷新缓存: {board_name}')
+        xui_manager = get_xui_manager()
+        if xui_manager:
+            all_inbounds = xui_manager.get_all_inbounds()
+            if all_inbounds:
+                inbounds_cache.set_aggregated(all_inbounds)
+                logger.info(f'已刷新入站列表缓存，共 {len(all_inbounds)} 个节点')
         
         logger.info(f'管理员添加了服务器: {board_name}')
         flash(f'服务器 {board_name} 添加成功！', 'success')
@@ -82,12 +80,9 @@ def add_server():
 
 
 @servers_bp.route('/edit/<board_name>', methods=['POST'])
+@admin_required
 def edit_server(board_name):
     """编辑服务器"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以编辑服务器！', 'error')
-        return redirect(url_for('main.index'))
-    
     server = request.form.get('server')
     port = request.form.get('port')
     path = request.form.get('path')
@@ -128,6 +123,15 @@ def edit_server(board_name):
         # 重新加载配置
         reload_xui_manager()
         
+        # 刷新入站列表缓存
+        logger.info(f'服务器编辑后刷新缓存: {board_name}')
+        xui_manager = get_xui_manager()
+        if xui_manager:
+            all_inbounds = xui_manager.get_all_inbounds()
+            if all_inbounds:
+                inbounds_cache.set_aggregated(all_inbounds)
+                logger.info(f'已刷新入站列表缓存，共 {len(all_inbounds)} 个节点')
+        
         logger.info(f'管理员编辑了服务器: {board_name}')
         flash(f'服务器 {board_name} 更新成功！', 'success')
     except Exception as e:
@@ -139,12 +143,9 @@ def edit_server(board_name):
 
 
 @servers_bp.route('/delete/<board_name>')
+@admin_required
 def delete_server(board_name):
     """删除服务器"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以删除服务器！', 'error')
-        return redirect(url_for('main.index'))
-    
     # 查找服务器配置
     server_config = ServerConfig.query.filter_by(board_name=board_name).first()
     if not server_config:
@@ -158,6 +159,15 @@ def delete_server(board_name):
         
         # 重新加载配置
         reload_xui_manager()
+        
+        # 刷新入站列表缓存
+        logger.info(f'服务器删除后刷新缓存: {board_name}')
+        xui_manager = get_xui_manager()
+        if xui_manager:
+            all_inbounds = xui_manager.get_all_inbounds()
+            if all_inbounds:
+                inbounds_cache.set_aggregated(all_inbounds)
+                logger.info(f'已刷新入站列表缓存，共 {len(all_inbounds)} 个节点')
         
         logger.info(f'管理员删除了服务器: {board_name}')
         flash(f'服务器 {board_name} 已删除！', 'success')

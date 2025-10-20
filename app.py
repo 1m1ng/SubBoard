@@ -1,12 +1,14 @@
 """SubBoard应用主文件 - 模块化版本"""
 import os
+import atexit
 from flask import Flask
 from waitress import serve
 from extensions import db, logger
 from config import config
 from models import User
 from utils import generate_random_password, register_template_filters
-from routes import auth_bp, admin_bp, subscription_bp, servers_bp, mihomo_bp, main_bp
+from routes import auth_bp, admin_bp, subscription_bp, servers_bp, mihomo_bp, main_bp, packages_bp
+from scheduler import init_scheduler, get_scheduler
 
 
 def create_app(config_name='default'):
@@ -37,10 +39,15 @@ def create_app(config_name='default'):
     app.register_blueprint(subscription_bp)
     app.register_blueprint(servers_bp)
     app.register_blueprint(mihomo_bp)
+    app.register_blueprint(packages_bp)
     
     # 初始化数据库
     with app.app_context():
         init_database()
+    
+    # 初始化调度器
+    init_scheduler(app)
+    logger.info("流量监控调度器已初始化")
     
     return app
 
@@ -71,6 +78,7 @@ def init_database():
         logger.info('默认管理员账号已创建：')
         logger.info(f'  用户名: admin')
         logger.info(f'  密码: {admin_password}')
+        logger.info(f'  邮箱: {admin.email}')
         logger.info('请妥善保管此密码，建议登录后立即修改！')
         logger.info('='*60)
     else:
@@ -86,6 +94,14 @@ if __name__ == '__main__':
     
     # 创建应用
     app = create_app(env if env in config else 'default')
+    
+    # 注册退出时停止调度器
+    def shutdown_scheduler():
+        scheduler = get_scheduler()
+        if scheduler:
+            scheduler.stop()
+    
+    atexit.register(shutdown_scheduler)
     
     # 使用 Waitress WSGI 服务器（支持 Windows 和 Linux）
     host = app.config['HOST']

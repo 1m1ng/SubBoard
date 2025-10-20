@@ -1,0 +1,176 @@
+/* ================================
+   套餐管理页面专用样式
+   ================================ */
+
+/* 节点选择区域 */
+.nodes-selection {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    background: #f8f9fa;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.server-group {
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+    overflow: hidden;
+}
+
+.server-group:last-child {
+    margin-bottom: 0;
+}
+
+.server-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+}
+
+.server-header:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+}
+
+.server-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.toggle-icon {
+    transition: transform 0.3s ease;
+    font-size: 0.8rem;
+}
+
+.nodes-list {
+    padding: 0.75rem;
+    background: white;
+}
+
+.node-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.node-item:last-child {
+    margin-bottom: 0;
+}
+
+.node-item:hover {
+    background: #e9ecef;
+    border-color: #cbd5e0;
+}
+
+.node-checkbox {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    cursor: pointer;
+}
+
+.node-checkbox input[type="checkbox"] {
+    margin-right: 0.5rem;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.node-name {
+    font-size: 0.9rem;
+    color: #2d3748;
+}
+
+.rate-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rate-input label {
+    font-size: 0.85rem;
+    color: #4a5568;
+    margin: 0;
+}
+
+.rate-field {
+    width: 80px;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.rate-field:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.loading-text {
+    text-align: center;
+    padding: 1rem;
+    color: #718096;
+    font-size: 0.9rem;
+}
+
+.error-text {
+    text-align: center;
+    padding: 1rem;
+    color: #e53e3e;
+    font-size: 0.9rem;
+}
+
+.no-data {
+    text-align: center;
+    padding: 1rem;
+    color: #a0aec0;
+    font-size: 0.9rem;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .nodes-selection {
+        max-height: 300px;
+    }
+    
+    .node-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .rate-input {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 480px) {
+    .server-name {
+        font-size: 0.85rem;
+    }
+    
+    .node-name {
+        font-size: 0.85rem;
+    }
+    
+    .rate-field {
+        width: 70px;
+    }
+}

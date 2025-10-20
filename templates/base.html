@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SubBoard - 订阅节点管理系统{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- 侧边栏导航 -->
@@ -33,7 +34,6 @@
                     </svg>
                     <span class="sidebar-text">首页</span>
                 </a>
-
                 {% if session.get('is_admin') %}
                     <a href="{{ url_for('admin.admin') }}" class="sidebar-item" title="用户管理">
                         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -55,6 +55,16 @@
                         <span class="sidebar-text">服务器管理</span>
                     </a>
 
+                    <a href="{{ url_for('packages.packages') }}" class="sidebar-item" title="套餐管理">
+                        <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                        </svg>
+                        <span class="sidebar-text">套餐管理</span>
+                    </a>
+
                     <a href="{{ url_for('mihomo.mihomo_template') }}" class="sidebar-item" title="Mihomo 模板">
                         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -66,6 +76,18 @@
                         <span class="sidebar-text">Mihomo 模板</span>
                     </a>
                 {% endif %}
+
+                <a href="{{ url_for('main.nodes') }}" class="sidebar-item" title="节点信息">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="2" x2="12" y2="5"></line>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                        <line x1="2" y1="12" x2="5" y2="12"></line>
+                        <line x1="19" y1="12" x2="22" y2="12"></line>
+                    </svg>
+                    <span class="sidebar-text">节点信息</span>
+                </a>
 
                 <a href="{{ url_for('auth.profile') }}" class="sidebar-item" title="个人资料">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

@@ -1,5 +1,5 @@
 """用户模型"""
-from datetime import datetime
+from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 from extensions import db
@@ -12,9 +12,15 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     # 订阅相关字段
     subscription_token = db.Column(db.String(64), unique=True, nullable=True)
+    
+    # 套餐相关字段
+    package_id = db.Column(db.Integer, db.ForeignKey('package.id'), nullable=True)
+    package_expire_time = db.Column(db.DateTime, nullable=True)  # 套餐到期时间
+    next_reset_time = db.Column(db.DateTime, nullable=True)  # 下一次流量重置时间
+    used_traffic = db.Column(db.BigInteger, default=0)  # 已使用流量（字节）
 
     def set_password(self, password):
         """设置密码"""

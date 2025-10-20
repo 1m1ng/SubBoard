@@ -1,35 +1,35 @@
 """管理员路由"""
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from extensions import db, logger
-from models import User, IPBlock
+from models import User, IPBlock, Package
 from utils import generate_random_password
+from utils.decorators import admin_required
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
 @admin_bp.route('/')
+@admin_required
 def admin():
     """管理员页面：用户管理"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以访问此页面！', 'error')
-        return redirect(url_for('main.index'))
-    
     users = User.query.all()
     blocked_ips = IPBlock.query.filter(IPBlock.blocked_until.isnot(None)).all()
-    return render_template('admin.html', users=users, blocked_ips=blocked_ips)
+    packages = Package.query.all()
+    return render_template('admin.html', users=users, blocked_ips=blocked_ips, packages=packages)
 
 
 @admin_bp.route('/create_user', methods=['POST'])
+@admin_required
 def create_user():
     """管理员：创建用户"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以创建用户！', 'error')
-        return redirect(url_for('main.index'))
     
     username = request.form.get('username')
     email = request.form.get('email')
     password = request.form.get('password')
     is_admin = request.form.get('is_admin') == 'on'
+    package_id = request.form.get('package_id')
+    package_expire_time = request.form.get('package_expire_time')
+    next_reset_time = request.form.get('next_reset_time')
     
     # 验证
     if not username or not email or not password:
@@ -50,23 +50,30 @@ def create_user():
         return redirect(url_for('admin.admin'))
     
     # 创建新用户
-    user = User(username=username, email=email, is_admin=is_admin)
+    user = User(username=username, email=email, is_admin=is_admin) # type: ignore
     user.set_password(password)
+    
+    # 设置套餐信息
+    if package_id:
+        from datetime import datetime
+        user.package_id = int(package_id)
+        if package_expire_time:
+            user.package_expire_time = datetime.fromisoformat(package_expire_time)
+        if next_reset_time:
+            user.next_reset_time = datetime.fromisoformat(next_reset_time)
+    
     db.session.add(user)
     db.session.commit()
     
-    logger.info(f'管理员创建了新用户: {username}, 管理员权限: {is_admin}')
+    logger.info(f'管理员创建了新用户: {username} (Email: {email}), 管理员权限: {is_admin}')
     flash(f'用户 {username} 创建成功！', 'success')
     return redirect(url_for('admin.admin'))
 
 
 @admin_bp.route('/edit_user/<int:user_id>', methods=['POST'])
+@admin_required
 def edit_user(user_id):
     """管理员：编辑用户"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以编辑用户！', 'error')
-        return redirect(url_for('main.index'))
-    
     user = db.session.get(User, user_id)
     if not user:
         flash('用户不存在！', 'error')
@@ -76,6 +83,9 @@ def edit_user(user_id):
     email = request.form.get('email')
     password = request.form.get('password')
     is_admin = request.form.get('is_admin') == 'on'
+    package_id = request.form.get('package_id')
+    package_expire_time = request.form.get('package_expire_time')
+    next_reset_time = request.form.get('next_reset_time')
     
     # 验证
     if not username or not email:
@@ -105,6 +115,31 @@ def edit_user(user_id):
     elif password and len(password) < 6:
         flash('密码长度至少为6位，密码未更新！', 'error')
     
+    # 更新套餐信息
+    from datetime import datetime, timedelta
+    if package_id:
+        user.package_id = int(package_id)
+        if package_expire_time:
+            user.package_expire_time = datetime.fromisoformat(package_expire_time)
+        else:
+            user.package_expire_time = None
+        if next_reset_time:
+            user.next_reset_time = datetime.fromisoformat(next_reset_time)
+        elif package_expire_time:
+            # Calculate next reset time based on the expiration date's month and day
+            expire_date = datetime.fromisoformat(package_expire_time)
+            next_month = expire_date.month % 12 + 1
+            year_increment = 1 if next_month == 1 else 0
+            user.next_reset_time = expire_date.replace(
+                year=expire_date.year + year_increment, month=next_month
+            )
+        else:
+            user.next_reset_time = None
+    else:
+        user.package_id = None
+        user.package_expire_time = None
+        user.next_reset_time = None
+    
     db.session.commit()
     
     logger.info(f'管理员编辑了用户: {username}')
@@ -113,12 +148,9 @@ def edit_user(user_id):
 
 
 @admin_bp.route('/delete_user/<int:user_id>')
+@admin_required
 def delete_user(user_id):
     """管理员：删除用户"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以删除用户！', 'error')
-        return redirect(url_for('main.index'))
-    
     # 不能删除自己
     if user_id == session['user_id']:
         flash('不能删除自己的账号！', 'error')
@@ -138,12 +170,9 @@ def delete_user(user_id):
 
 
 @admin_bp.route('/unblock_ip/<int:ip_id>')
+@admin_required
 def unblock_ip(ip_id):
     """管理员：解锁IP"""
-    if 'user_id' not in session or not session.get('is_admin'):
-        flash('只有管理员可以解锁IP！', 'error')
-        return redirect(url_for('main.index'))
-
     ip_record = db.session.get(IPBlock, ip_id)
     if ip_record:
         ip_address = ip_record.ip_address

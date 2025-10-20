@@ -1,0 +1,44 @@
+/* ================================
+   用户管理页面专用样式
+   ================================ */
+
+/* UUID 代码样式 */
+.uuid-code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.75rem;
+    background: #f8f9fa;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    color: #495057;
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+    transition: all 0.3s ease;
+}
+
+.uuid-code:hover {
+    background: #e9ecef;
+    max-width: none;
+    overflow: visible;
+    white-space: normal;
+    word-break: break-all;
+}
+
+/* 用户管理页面响应式特殊处理 */
+@media (max-width: 768px) {
+    /* UUID在移动端缩短显示 */
+    .uuid-code {
+        max-width: 100px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .uuid-code {
+        max-width: 80px;
+    }
+}

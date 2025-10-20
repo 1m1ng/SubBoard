@@ -6,6 +6,7 @@ import requests
 import logging
 from typing import Dict, Optional, List
 import base64
+import json
 import urllib3
 
 # 禁用SSL警告（用于自签名证书）
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 class XUIClient:
     """3XUI面板API客户端"""
     
-    def __init__(self, server: str, port: int, path: str, username: str, password: str, sub_path: str):
+    def __init__(self, server: str, port: int, path: str, username: str, password: str, sub_path: str, board_name: Optional[str] = None):
         self.server = server
         self.port = port
         self.path = path.strip('/')
@@ -27,6 +28,7 @@ class XUIClient:
         self.session = requests.Session()
         self.base_url = f"https://{server}:{port}/{path}"
         self.logged_in = False
+        self.board_name = board_name  # 面板名称，用于缓存标识
         
     def login(self) -> bool:
         """
@@ -54,61 +56,58 @@ class XUIClient:
             logger.error(f"登录到 {self.server}:{self.port} 时发生错误: {str(e)}")
             return False
     
-    def get_client_traffic(self, email: str) -> Optional[Dict]:
+    def get_client_traffic(self, email: str) -> List[Dict]:
         """
-        获取客户端流量信息
+        获取客户端流量信息（支持同一Email在多个节点中的情况）
         参数:
             email: 用户邮箱
         返回:
-            包含流量信息的字典，失败返回None
+            包含所有匹配节点流量信息的列表
         """
         if not self.logged_in:
             if not self.login():
-                return None
+                return []
+
+        # 获取所有入站节点列表
+        inbounds = self.get_inbounds_list()
+        if not inbounds:
+            return []
+
+        traffic_list = []
         
-        traffic_url = f"{self.base_url}/panel/api/inbounds/getClientTraffics/{email}"
+        # 遍历所有入站节点，查找匹配的客户端信息
+        for inbound in inbounds:
+            inbound_id = inbound.get('id')
+            if not inbound_id:
+                continue
+
+            # 获取入站节点的详细信息
+            inbound_info = self.get_inbound_info(inbound_id)
+            if not inbound_info:
+                continue
+
+            # 查找匹配的客户端信息
+            client_stats = inbound_info.get('clientStats', [])
+            if not client_stats:  # 如果 clientStats 为 None 或空列表
+                continue
+                
+            for client in client_stats:
+                if client.get('email') == email:
+                    node_name = inbound_info.get('remark', inbound_info.get('tag', ''))
+                    traffic_list.append({
+                        "inboundId": inbound_id,
+                        "nodeName": node_name,
+                        "up": client.get('up', 0),
+                        "down": client.get('down', 0),
+                        "total": client.get('total', 0),
+                        "expiryTime": client.get('expiryTime', 0),
+                        "subId": client.get('subId')
+                    })
+
+        if not traffic_list:
+            logger.warning(f"未找到匹配的客户端流量信息，Email: {email}")
         
-        # 最多重试一次（检测到 session 失效时重新登录）
-        for attempt in range(2):
-            try:
-                response = self.session.get(traffic_url, verify=False, timeout=10)
-                
-                # 检查响应状态码
-                if response.status_code == 401 or response.status_code == 403:
-                    # 未授权，session 可能已过期
-                    logger.warning(f"Session 可能已过期 {self.server}:{self.port}，尝试重新登录...")
-                    self.logged_in = False
-                    if attempt == 0 and self.login():
-                        continue  # 重新登录成功，重试请求
-                    return None
-                
-                # 尝试解析 JSON
-                try:
-                    data = response.json()
-                except ValueError as json_error:
-                    # JSON 解析失败，可能是返回了 HTML（登录页面）
-                    logger.warning(f"JSON 解析失败 {self.server}:{self.port}，可能 session 已过期: {str(json_error)}")
-                    self.logged_in = False
-                    if attempt == 0 and self.login():
-                        continue  # 重新登录成功，重试请求
-                    return None
-                
-                if data.get('success'):
-                    return data.get('obj')
-                else:
-                    logger.warning(f"获取流量失败 {self.server}:{self.port}, email: {email}: {data.get('msg')}")
-                    return None
-                    
-            except Exception as e:
-                logger.error(f"获取流量信息时发生错误 {self.server}:{self.port}: {str(e)}")
-                if attempt == 0:
-                    # 第一次失败，尝试重新登录
-                    self.logged_in = False
-                    if self.login():
-                        continue  # 重新登录成功，重试请求
-                return None
-        
-        return None
+        return traffic_list
     
     def get_subscription(self, sub_id: str) -> Optional[str]:
         """
@@ -134,22 +133,54 @@ class XUIClient:
     
     def get_inbound_info(self, inbound_id: int) -> Optional[Dict]:
         """
-        获取入站节点的详细信息
+        获取入站节点的详细信息（从缓存的入站列表中查找）
         参数:
             inbound_id: 入站节点ID
         返回:
             包含节点信息的字典，失败返回None
         """
+        # 先从缓存的入站列表中查找
+        if self.board_name:
+            from utils.cache import inbounds_cache
+            cached_inbound = inbounds_cache.find_inbound(self.board_name, inbound_id)
+            if cached_inbound:
+                return cached_inbound
+        
+        # 如果缓存未命中，获取完整的入站列表（这会更新缓存）
+        inbounds = self.get_inbounds_list()
+        if inbounds:
+            for inbound in inbounds:
+                if inbound.get('id') == inbound_id:
+                    return inbound
+        
+        logger.warning(f"未找到节点信息，inbound_id: {inbound_id}")
+        return None
+    
+    def get_inbounds_list(self) -> Optional[List]:
+        """
+        获取所有入站节点列表（使用缓存）
+        返回:
+            包含所有节点信息的列表，失败返回None
+        """
+        # 如果有 board_name，尝试从缓存获取
+        if self.board_name:
+            from utils.cache import inbounds_cache
+            cached_data, from_cache, cache_age = inbounds_cache.get_board(self.board_name)
+            if from_cache:
+                logger.debug(f"使用缓存的入站列表 {self.board_name}，缓存年龄: {cache_age}秒")
+                return cached_data
+        
+        # 缓存未命中，从API获取
         if not self.logged_in:
             if not self.login():
                 return None
         
-        inbound_url = f"{self.base_url}/panel/api/inbounds/get/{inbound_id}"
+        inbounds_url = f"{self.base_url}/panel/api/inbounds/list"
         
         # 最多重试一次（检测到 session 失效时重新登录）
         for attempt in range(2):
             try:
-                response = self.session.get(inbound_url, verify=False, timeout=10)
+                response = self.session.get(inbounds_url, verify=False, timeout=10)
                 
                 # 检查响应状态码
                 if response.status_code == 401 or response.status_code == 403:
@@ -172,13 +203,21 @@ class XUIClient:
                     return None
                 
                 if data.get('success'):
-                    return data.get('obj')
+                    inbounds_list = data.get('obj', [])
+                    
+                    # 保存到缓存
+                    if self.board_name and inbounds_list:
+                        from utils.cache import inbounds_cache
+                        inbounds_cache.set_board(self.board_name, inbounds_list)
+                        logger.debug(f"已缓存入站列表 {self.board_name}，共 {len(inbounds_list)} 个节点")
+                    
+                    return inbounds_list
                 else:
-                    logger.warning(f"获取节点信息失败 {self.server}:{self.port}, inbound_id: {inbound_id}: {data.get('msg')}")
+                    logger.warning(f"获取节点列表失败 {self.server}:{self.port}: {data.get('msg')}")
                     return None
                     
             except Exception as e:
-                logger.error(f"获取节点信息时发生错误 {self.server}:{self.port}: {str(e)}")
+                logger.error(f"获取节点列表时发生错误 {self.server}:{self.port}: {str(e)}")
                 if attempt == 0:
                     # 第一次失败，尝试重新登录
                     self.logged_in = False
@@ -187,6 +226,117 @@ class XUIClient:
                 return None
         
         return None
+    
+    def update_client(self, client_uuid: str, inbound_id: int, client_data: Dict) -> bool:
+        """
+        更新客户端配置
+        参数:
+            client_uuid: 客户端UUID
+            inbound_id: 入站节点ID
+            client_data: 客户端完整数据
+        返回:
+            是否成功
+        """
+        if not self.logged_in:
+            if not self.login():
+                return False
+        
+        update_url = f"{self.base_url}/panel/api/inbounds/updateClient/{client_uuid}"
+        
+        # 准备请求数据：inbound_id 和客户端配置的 JSON 字符串
+        payload = {
+            'id': inbound_id,
+            'settings': json.dumps({"clients": [client_data]})  # 确保 settings 是嵌套 JSON 字符串
+        }
+        logger.debug(f"更新客户端请求数据: {payload}")
+        
+        for attempt in range(2):
+            try:
+                response = self.session.post(update_url, json=payload, verify=False, timeout=10)
+                
+                if response.status_code == 401 or response.status_code == 403:
+                    logger.warning(f"Session 可能已过期 {self.server}:{self.port}，尝试重新登录...")
+                    self.logged_in = False
+                    if attempt == 0 and self.login():
+                        continue
+                    return False
+                
+                try:
+                    data = response.json()
+                except ValueError as e:
+                    logger.error(
+                        f"更新客户端响应JSON解析失败 {self.server}:{self.port}\n"
+                        f"状态码: {response.status_code}\n"
+                        f"响应内容: {response.text[:500]}\n"
+                        f"错误: {str(e)}"
+                    )
+                    return False
+                
+                if data.get('success'):
+                    logger.info(f"成功更新客户端 {client_uuid} 在节点 {inbound_id}")
+                    return True
+                else:
+                    logger.warning(f"更新客户端失败: {data.get('msg')}")
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"更新客户端时发生错误: {str(e)}")
+                if attempt == 0:
+                    self.logged_in = False
+                    if self.login():
+                        continue
+                return False
+        
+        return False
+    
+    def reset_client_traffic(self, inbound_id: int, email: str) -> bool:
+        """
+        重置客户端流量
+        参数:
+            inbound_id: 入站节点ID
+            email: 客户端邮箱
+        返回:
+            是否成功
+        """
+        if not self.logged_in:
+            if not self.login():
+                return False
+        
+        reset_url = f"{self.base_url}/panel/api/inbounds/{inbound_id}/resetClientTraffic/{email}"
+        
+        for attempt in range(2):
+            try:
+                response = self.session.post(reset_url, verify=False, timeout=10)
+                
+                if response.status_code == 401 or response.status_code == 403:
+                    logger.warning(f"Session 可能已过期 {self.server}:{self.port}，尝试重新登录...")
+                    self.logged_in = False
+                    if attempt == 0 and self.login():
+                        continue
+                    return False
+                
+                try:
+                    data = response.json()
+                except ValueError:
+                    logger.error(f"重置流量响应JSON解析失败 {self.server}:{self.port}")
+                    return False
+                
+                if data.get('success'):
+                    logger.info(f"成功重置客户端流量: {email} 在节点 {inbound_id}")
+                    return True
+                else:
+                    logger.warning(f"重置客户端流量失败: {data.get('msg')}")
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"重置客户端流量时发生错误: {str(e)}")
+                if attempt == 0:
+                    self.logged_in = False
+                    if self.login():
+                        continue
+                return False
+        
+        return False
 
 
 class XUIManager:
@@ -207,80 +357,38 @@ class XUIManager:
                     path=board_config['path'],
                     username=board_config['username'],
                     password=board_config['password'],
-                    sub_path=board_config['sub_path']
+                    sub_path=board_config['sub_path'],
+                    board_name=board_name  # 传递 board_name 用于缓存
                 )
                 self.clients[board_name] = client
                 logger.info(f"已加载面板配置: {board_name}")
             except Exception as e:
                 logger.error(f"加载面板配置 {board_name} 失败: {str(e)}")
     
-    def get_all_traffic_info(self, email: str) -> List[Dict]:
-        """
-        从所有面板获取用户的流量信息
-        参数:
-            email: 用户邮箱
-        返回:
-            包含所有节点流量信息的列表
-        """
-        import re
-        traffic_list = []
-        
-        for board_name, client in self.clients.items():
-            traffic_info = client.get_client_traffic(email)
-            if traffic_info:
-                # 添加面板名称标识
-                traffic_info['board_name'] = board_name
-                traffic_info['server'] = client.server
-                
-                # 获取节点详细信息（包括remark）
-                inbound_id = traffic_info.get('inboundId')
-                if inbound_id:
-                    inbound_info = client.get_inbound_info(inbound_id)
-                    if inbound_info:
-                        remark = inbound_info.get('remark', '')
-                        traffic_info['node_name'] = remark
-                        
-                        # 提取国旗emoji并转换为国家代码
-                        flag_match = re.match(r'^([\U0001F1E6-\U0001F1FF]{2})', remark)
-                        if flag_match:
-                            flag_emoji = flag_match.group(1)
-                            # 将emoji转换为国家代码（ISO 3166-1 alpha-2）
-                            # emoji国旗是由两个Regional Indicator字符组成的
-                            # 例如：🇨🇳 = U+1F1E8 U+1F1F3 -> CN
-                            country_code = ''
-                            for char in flag_emoji:
-                                code_point = ord(char)
-                                if 0x1F1E6 <= code_point <= 0x1F1FF:
-                                    # 转换为A-Z字母
-                                    country_code += chr(code_point - 0x1F1E6 + ord('A'))
-                            traffic_info['country_code'] = country_code.lower()
-                            traffic_info['flag_emoji'] = flag_emoji
-                        else:
-                            traffic_info['country_code'] = None
-                            traffic_info['flag_emoji'] = '🌐'
-                
-                traffic_list.append(traffic_info)
-        
-        return traffic_list
-    
-    def get_aggregated_subscription(self, email: str) -> Optional[tuple]:
+    def get_aggregated_subscription(self, email: str, user=None) -> Optional[tuple]:
         """
         获取聚合的订阅信息
         参数:
             email: 用户邮箱
+            user: User对象（可选），用于获取套餐流量和到期时间信息
         返回:
             (base64_content, traffic_info) 元组
             base64_content: 聚合后的BASE64订阅内容
             traffic_info: {upload, download, total, expire} 字典
         """
         all_nodes = []
-        total_upload = 0
-        total_download = 0
-        total_traffic = 0
-        max_expire = 0
         
         # 获取所有面板的流量信息
-        traffic_list = self.get_all_traffic_info(email)
+        traffic_list = []
+        for board_name, client in self.clients.items():
+            # 获取该面板中所有匹配Email的节点流量
+            traffic_info_list = client.get_client_traffic(email)
+            
+            # 为每个节点添加面板信息
+            for traffic_info in traffic_info_list:
+                traffic_info['board_name'] = board_name
+                traffic_info['server'] = client.server
+                traffic_list.append(traffic_info)
         
         for traffic_info in traffic_list:
             sub_id = traffic_info.get('subId')
@@ -289,7 +397,7 @@ class XUIManager:
             
             # 获取对应的客户端
             board_name = traffic_info.get('board_name')
-            client = self.clients.get(board_name)
+            client = self.clients.get(board_name) if board_name else None
             if not client:
                 continue
             
@@ -309,25 +417,37 @@ class XUIManager:
                         
                         # 检查是否包含 # 备注部分
                         if '#' in line:
-                            url_part, remark = line.split('#', 1)
+                            # 使用 rsplit 确保只在最后一个 # 处分割（因为 URL 中可能包含 #）
+                            url_part, remark = line.rsplit('#', 1)
                             
-                            # 查找邮箱在备注中的位置
-                            if email in remark:
+                            # URL 解码备注（邮箱可能被编码为 %40 等）
+                            from urllib.parse import unquote
+                            decoded_remark = unquote(remark)
+                            
+                            # 查找邮箱在备注中的位置（在解码后的备注中查找）
+                            if email in decoded_remark:
                                 # 找到邮箱前面的 "-" 位置
-                                email_index = remark.find(email)
-                                if email_index > 0 and remark[email_index - 1] == '-':
+                                email_index = decoded_remark.find(email)
+                                if email_index > 0 and decoded_remark[email_index - 1] == '-':
                                     # 删除从 "-邮箱" 开始到结尾的所有内容
-                                    remark = remark[:email_index - 1]
+                                    cleaned_remark = decoded_remark[:email_index - 1].strip()
                                 elif email_index == 0:
                                     # 如果邮箱就在开头，删除整个备注
-                                    remark = ''
+                                    cleaned_remark = ''
                                 else:
                                     # 如果邮箱前面不是 "-"，只删除邮箱及其后面的内容
-                                    remark = remark[:email_index].rstrip('-')
+                                    cleaned_remark = decoded_remark[:email_index].rstrip('-').strip()
+                                
+                                # URL 编码清理后的备注
+                                from urllib.parse import quote
+                                encoded_remark = quote(cleaned_remark, safe='')
+                            else:
+                                # 没有找到邮箱，保持原样
+                                encoded_remark = remark
                             
                             # 重新组合节点信息
-                            if remark:
-                                processed_lines.append(f"{url_part}#{remark}")
+                            if encoded_remark:
+                                processed_lines.append(f"{url_part}#{encoded_remark}")
                             else:
                                 processed_lines.append(url_part)
                         else:
@@ -340,16 +460,6 @@ class XUIManager:
                         
                 except Exception as e:
                     logger.error(f"解码订阅内容失败 {board_name}: {str(e)}")
-            
-            # 累计流量信息
-            total_upload += traffic_info.get('up', 0)
-            total_download += traffic_info.get('down', 0)
-            total_traffic += traffic_info.get('total', 0)
-            
-            # 找出最晚的过期时间
-            expiry = traffic_info.get('expiryTime', 0)
-            if expiry > max_expire:
-                max_expire = expiry
         
         if not all_nodes:
             return None
@@ -361,11 +471,145 @@ class XUIManager:
         aggregated_base64 = base64.b64encode(aggregated.encode('utf-8')).decode('utf-8')
         
         # 构建流量信息
-        traffic_info = {
-            'upload': total_upload,
-            'download': total_download,
-            'total': total_traffic,
-            'expire': max_expire // 1000  # 转换为秒
-        }
+        # 如果提供了user对象且有套餐信息，使用套餐数据
+        if user and user.package_id:
+            from models import Package
+            package = Package.query.get(user.package_id)
+            if package:
+                # 使用套餐信息
+                used_traffic_bytes = int((user.used_traffic or 0) * 1024 * 1024 * 1024)  # GB转字节
+                total_traffic_bytes = package.total_traffic
+                expire_timestamp = int(user.package_expire_time.timestamp()) if user.package_expire_time else 0
+                
+                traffic_info = {
+                    'upload': 0,  # 不显示上传流量
+                    'download': used_traffic_bytes,  # 使用已用流量
+                    'total': total_traffic_bytes,  # 套餐总流量
+                    'expire': expire_timestamp  # 套餐到期时间（秒级时间戳）
+                }
+            else:
+                # 套餐不存在，使用默认值
+                traffic_info = {
+                    'upload': 0,
+                    'download': 0,
+                    'total': 0,
+                    'expire': 0
+                }
+        else:
+            # 没有套餐信息，使用默认值
+            traffic_info = {
+                'upload': 0,
+                'download': 0,
+                'total': 0,
+                'expire': 0
+            }
         
         return aggregated_base64, traffic_info
+    
+    def get_all_inbounds(self) -> List[Dict]:
+        """
+        从所有面板获取节点列表
+        返回:
+            包含所有节点信息的列表
+        """
+        inbounds_list = []
+        
+        for board_name, client in self.clients.items():
+            inbounds = client.get_inbounds_list()
+            if inbounds:
+                for inbound in inbounds:
+                    # 添加服务器信息
+                    inbound['board_name'] = board_name
+                    inbound['server'] = client.server
+                    inbounds_list.append(inbound)
+        
+        return inbounds_list
+    
+    def get_client_traffic(self, email: str) -> List[Dict]:
+        """
+        从所有面板获取指定邮箱的流量信息
+        参数:
+            email: 用户邮箱
+        返回:
+            流量信息列表，每个元素包含 {board_name, server, inbound_id, up, down, total, expiryTime}
+        """
+        all_traffic = []
+        
+        for board_name, client in self.clients.items():
+            traffic_list = client.get_client_traffic(email)
+            
+            # 为每个流量记录添加面板信息
+            for traffic in traffic_list:
+                traffic['board_name'] = board_name
+                traffic['server'] = client.server
+                all_traffic.append(traffic)
+        
+        return all_traffic
+    
+    def get_all_clients_by_email(self, email: str) -> List[Dict]:
+        """
+        从所有面板获取指定邮箱的客户端信息
+        参数:
+            email: 用户邮箱
+        返回:
+            客户端信息列表，每个元素包含 {board_name, server, inbound_id, client}
+        """
+        all_clients = []
+        
+        for board_name, client in self.clients.items():
+            inbounds = client.get_inbounds_list()
+            if not inbounds:
+                continue
+            
+            for inbound in inbounds:
+                try:
+                    settings = json.loads(inbound.get('settings', '{}'))
+                    clients = settings.get('clients', [])
+                    
+                    for cli in clients:
+                        if cli.get('email') == email:
+                            all_clients.append({
+                                'board_name': board_name,
+                                'server': client.server,
+                                'inbound_id': inbound['id'],
+                                'client': cli
+                            })
+                except Exception as e:
+                    logger.error(f"解析节点 {inbound.get('id')} 的客户端信息失败: {str(e)}")
+        
+        return all_clients
+    
+    def update_client(self, board_name: str, client_uuid: str, inbound_id: int, client_data: Dict) -> bool:
+        """
+        更新客户端配置（在指定面板中）
+        参数:
+            board_name: 面板名称
+            client_uuid: 客户端UUID
+            inbound_id: 入站节点ID
+            client_data: 客户端完整数据
+        返回:
+            是否成功
+        """
+        client = self.clients.get(board_name)
+        if not client:
+            logger.error(f"未找到面板: {board_name}")
+            return False
+        
+        return client.update_client(client_uuid, inbound_id, client_data)
+    
+    def reset_client_traffic(self, board_name: str, inbound_id: int, email: str) -> bool:
+        """
+        重置客户端流量（在指定面板中）
+        参数:
+            board_name: 面板名称
+            inbound_id: 入站节点ID
+            email: 客户端邮箱
+        返回:
+            是否成功
+        """
+        client = self.clients.get(board_name)
+        if not client:
+            logger.error(f"未找到面板: {board_name}")
+            return False
+        
+        return client.reset_client_traffic(inbound_id, email)

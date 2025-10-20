@@ -10,7 +10,6 @@ logs/
 .venv
 venv/
 *.md
-!README.md
 .vscode/
 .idea/
 *.db

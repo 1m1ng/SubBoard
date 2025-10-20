@@ -1,6 +1,7 @@
 """Flask扩展初始化"""
 from flask_sqlalchemy import SQLAlchemy
 import logging
+import os
 
 # 初始化数据库
 db = SQLAlchemy()
@@ -16,6 +17,7 @@ def setup_logging():
             logging.StreamHandler()
         ]
     )
+    logging.getLogger().setLevel(os.getenv('LOG_LEVEL', 'INFO').upper())
     return logging.getLogger(__name__)
 
 logger = setup_logging()

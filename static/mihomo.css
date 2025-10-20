@@ -1,0 +1,229 @@
+/* ================================
+   Mihomo 模板管理页面样式
+   ================================ */
+
+.yaml-editor-wrapper {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.yaml-editor {
+    width: 100%;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    padding: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: #f8f9fa;
+    color: #333;
+    resize: vertical;
+    transition: all 0.3s ease;
+}
+
+.yaml-editor:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: white;
+}
+
+.editor-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.info-box {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.info-box h4 {
+    color: #2d3748;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.info-box h4:first-child {
+    margin-top: 0;
+}
+
+.info-box p, .info-box ul {
+    color: #4a5568;
+    margin-bottom: 0.75rem;
+}
+
+.info-box ul {
+    padding-left: 1.5rem;
+}
+
+.info-box code {
+    background: #e2e8f0;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #667eea;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.actions .btn-small {
+    height: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    padding: 0.4rem 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    line-height: 1;
+}
+
+/* 加载动画样式 */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin: 2rem 0;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f4f6;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-text {
+    margin-top: 1.5rem;
+    color: #667eea;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+/* 刷新按钮样式 */
+.btn-refresh {
+    background: rgba(102, 126, 234, 0.1);
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    border-radius: 8px;
+    padding: 0.4rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+}
+
+.btn-refresh:hover:not(:disabled) {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: rgba(102, 126, 234, 0.5);
+    transform: scale(1.05);
+}
+
+.btn-refresh:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-refresh svg {
+    color: #667eea;
+    transition: transform 0.3s ease;
+}
+
+/* 错误消息样式 */
+.error-message {
+    text-align: center;
+    padding: 2rem;
+}
+
+.error-message svg {
+    color: #dc3545;
+    margin-bottom: 1rem;
+}
+
+.error-message p {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+}
+
+/* 节点详情样式 */
+.node-details {
+    padding: 1rem 0 0;
+    border-top: 1px solid #e2e8f0;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.95rem;
+}
+
+.detail-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.detail-label svg {
+    width: 16px;
+    height: 16px;
+}
+
+.detail-value {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+/* 进度条样式 */
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+.traffic-percentage {
+    display: block;
+    text-align: right;
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+}
