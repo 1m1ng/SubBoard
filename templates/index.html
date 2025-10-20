@@ -16,96 +16,110 @@
     </div>
 
     <!-- 套餐信息卡片 -->
+    {% if package and user.package_expire_time and user.package_expire_time > now %}
     <div class="package-info-card">
-        {% if package %}
-            <div class="package-header">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                </svg>
-                <h2>{{ package.name }}</h2>
-            </div>
-            
-            <div class="package-details">
-                <!-- 流量使用情况 -->
-                <div class="detail-item">
-                    <div class="detail-label">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                            <polyline points="17 6 23 6 23 12"></polyline>
-                        </svg>
-                        流量使用
-                    </div>
-                    <div class="traffic-info">
-                        <div class="traffic-text">
-                            <span class="used">{{ "%.2f"|format(user.used_traffic or 0) }} GB</span>
-                            <span class="separator">/</span>
-                            {% set total_gb = package.total_traffic / (1024 ** 3) %}
-                            <span class="total">{{ "%.2f"|format(total_gb) }} GB</span>
-                        </div>
-                        <div class="progress-bar">
-                            {% set used = user.used_traffic or 0 %}
-                            {% set total = total_gb %}
-                            {% set percentage = (used / total * 100) if total > 0 else 0 %}
-                            {% if percentage >= 90 %}
-                                {% set bar_class = "danger" %}
-                            {% elif percentage >= 70 %}
-                                {% set bar_class = "warning" %}
-                            {% else %}
-                                {% set bar_class = "normal" %}
-                            {% endif %}
-                            <div class="progress-fill {{ bar_class }}" style="width: {{ [percentage, 100]|min }}%"></div>
-                        </div>
-                        <div class="traffic-percentage">{{ "%.1f"|format(percentage) }}% 已使用</div>
-                    </div>
+        <div class="package-header">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+            </svg>
+            <h2>{{ package.name }}</h2>
+        </div>
+        
+        <div class="package-details">
+            <!-- 流量使用情况 -->
+            <div class="detail-item">
+                <div class="detail-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                    </svg>
+                    流量使用
                 </div>
-
-                <!-- 到期时间 -->
-                <div class="detail-item">
-                    <div class="detail-label">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                        到期时间
+                <div class="traffic-info">
+                    <div class="traffic-text">
+                        <span class="used">{{ "%.2f"|format(user.used_traffic or 0) }} GB</span>
+                        <span class="separator">/</span>
+                        {% set total_gb = package.total_traffic / (1024 ** 3) %}
+                        <span class="total">{{ "%.2f"|format(total_gb) }} GB</span>
                     </div>
-                    <div class="detail-value">
-                        {% if user.package_expire_time %}
-                            {{ user.package_expire_time.strftime('%Y年%m月%d日 %H:%M') }}
+                    <div class="progress-bar">
+                        {% set used = user.used_traffic or 0 %}
+                        {% set total = total_gb %}
+                        {% set percentage = (used / total * 100) if total > 0 else 0 %}
+                        {% if percentage >= 90 %}
+                            {% set bar_class = "danger" %}
+                        {% elif percentage >= 70 %}
+                            {% set bar_class = "warning" %}
                         {% else %}
-                            未设置
+                            {% set bar_class = "normal" %}
                         {% endif %}
+                        <div class="progress-fill {{ bar_class }}" style="width: {{ [percentage, 100]|min }}%"></div>
                     </div>
+                    <div class="traffic-percentage">{{ "%.1f"|format(percentage) }}% 已使用</div>
                 </div>
+            </div>
 
-                <!-- 下次流量重置 -->
-                {% if user.next_reset_time %}
-                <div class="detail-item">
-                    <div class="detail-label">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="23 4 23 10 17 10"></polyline>
-                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                        </svg>
-                        下次流量重置
-                    </div>
-                    <div class="detail-value">
-                        {{ user.next_reset_time.strftime('%Y年%m月%d日 %H:%M') }}
-                    </div>
+            <!-- 到期时间 -->
+            <div class="detail-item">
+                <div class="detail-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    到期时间
                 </div>
-                {% endif %}
+                <div class="detail-value">
+                    {% if user.package_expire_time %}
+                        {{ user.package_expire_time.strftime('%Y年%m月%d日 %H:%M') }}
+                    {% else %}
+                        未设置
+                    {% endif %}
+                </div>
             </div>
-        {% else %}
-            <div class="no-package">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-                <h3>无流量套餐</h3>
-                <p>您当前没有流量套餐，请联系管理员开通</p>
+
+            <!-- 下次流量重置 -->
+            {% if user.next_reset_time %}
+            <div class="detail-item">
+                <div class="detail-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                    下次流量重置
+                </div>
+                <div class="detail-value">
+                    {{ user.next_reset_time.strftime('%Y年%m月%d日 %H:%M') }}
+                </div>
             </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
+    {% elif package and user.package_expire_time and user.package_expire_time <= now %}
+    <div class="package-info-card">
+        <div class="no-package">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <h3>套餐已过期</h3>
+            <p>您的套餐已过期，请联系管理员续费或更换套餐。</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="package-info-card">
+        <div class="no-package">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <h3>无流量套餐</h3>
+            <p>您当前没有流量套餐，请联系管理员开通</p>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- 订阅管理按钮 -->
     {% if subscription_url and package and user.package_expire_time and user.package_expire_time > now %}
