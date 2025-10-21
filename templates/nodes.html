@@ -10,9 +10,6 @@
 <div class="nodes-container">
     <div class="nodes-header">
         <h2>节点信息</h2>
-        {% if is_admin %}
-            <span class="badge badge-admin">管理员视图 - 所有节点</span>
-        {% endif %}
         <button id="refreshBtn" class="btn btn-primary">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="23 4 23 10 17 10"></polyline>
@@ -23,8 +20,7 @@
         </button>
     </div>
 
-    <!-- 套餐信息提示（普通用户） -->
-    {% if not is_admin %}
+    <!-- 套餐信息提示 -->
     <div id="packageInfo" class="package-info-banner" style="display: none;">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
@@ -33,7 +29,6 @@
         </svg>
         <span id="packageInfoText">显示您的套餐节点</span>
     </div>
-    {% endif %}
 
     <!-- 加载提示 -->
     <div id="loadingIndicator" class="loading-indicator">
@@ -67,12 +62,6 @@ function formatBytes(bytes) {
     return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
 }
 
-// 计算使用百分比
-function calculatePercentage(used, total) {
-    if (total === 0) return 0; // 无限流量
-    return Math.min((used / total) * 100, 100);
-}
-
 // 创建节点卡片
 function createNodeCard(inbound) {
     const card = document.createElement('div');
@@ -81,7 +70,6 @@ function createNodeCard(inbound) {
     // 计算已用流量
     const used = (inbound.up || 0) + (inbound.down || 0);
     const total = inbound.total || 0;
-    const percentage = calculatePercentage(used, total);
     
     // 状态徽章
     const statusBadge = inbound.enable 
@@ -95,55 +83,24 @@ function createNodeCard(inbound) {
     
     // 流量信息
     let trafficInfo = '';
-    if (total === 0) {
-        trafficInfo = `
-            <div class="traffic-info">
-                <div class="traffic-label">流量使用情况</div>
-                <div class="traffic-unlimited">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
-                        <line x1="12" y1="2" x2="12" y2="12"></line>
-                    </svg>
-                    <span>无限流量</span>
+    trafficInfo = `
+        <div class="traffic-info">
+            <div class="traffic-label">流量使用情况</div>
+            <div class="traffic-stats">
+                <span class="traffic-used">${formatBytes(used)}</span>
+            </div>
+            <div class="traffic-details">
+                <div class="traffic-item">
+                    <span class="traffic-item-label">上传:</span>
+                    <span class="traffic-item-value">${formatBytes(inbound.up || 0)}</span>
                 </div>
-                <div class="traffic-details">
-                    <div class="traffic-item">
-                        <span class="traffic-item-label">上传:</span>
-                        <span class="traffic-item-value">${formatBytes(inbound.up || 0)}</span>
-                    </div>
-                    <div class="traffic-item">
-                        <span class="traffic-item-label">下载:</span>
-                        <span class="traffic-item-value">${formatBytes(inbound.down || 0)}</span>
-                    </div>
+                <div class="traffic-item">
+                    <span class="traffic-item-label">下载:</span>
+                    <span class="traffic-item-value">${formatBytes(inbound.down || 0)}</span>
                 </div>
             </div>
-        `;
-    } else {
-        trafficInfo = `
-            <div class="traffic-info">
-                <div class="traffic-label">流量使用情况</div>
-                <div class="traffic-stats">
-                    <span class="traffic-used">${formatBytes(used)}</span>
-                    <span class="traffic-separator">/</span>
-                    <span class="traffic-total">${formatBytes(total)}</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${percentage}%"></div>
-                </div>
-                <div class="traffic-percentage">${percentage.toFixed(1)}% 已使用</div>
-                <div class="traffic-details">
-                    <div class="traffic-item">
-                        <span class="traffic-item-label">上传:</span>
-                        <span class="traffic-item-value">${formatBytes(inbound.up || 0)}</span>
-                    </div>
-                    <div class="traffic-item">
-                        <span class="traffic-item-label">下载:</span>
-                        <span class="traffic-item-value">${formatBytes(inbound.down || 0)}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
+        </div>
+    `;
     
     // 节点名称，如果为空显示服务器信息
     const nodeName = inbound.remark || `${inbound.server}:${inbound.port}`;
@@ -175,13 +132,6 @@ function createNodeCard(inbound) {
                     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                 </svg>
                 <span>${inbound.protocol || 'N/A'}</span>
-            </div>
-            <div class="node-info-item">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                </svg>
-                <span>端口 ${inbound.port}</span>
             </div>
         </div>
         ${trafficInfo}
@@ -215,7 +165,7 @@ async function loadNodes() {
         
         loadingIndicator.style.display = 'none';
         
-        // 显示套餐信息（普通用户）
+        // 显示套餐信息
         if (data.package_name) {
             const packageInfo = document.getElementById('packageInfo');
             const packageInfoText = document.getElementById('packageInfoText');
