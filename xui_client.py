@@ -416,6 +416,56 @@ class XUIClient:
         
         return ""
     
+    def generate_shadowsocks_password(self, method: str) -> Optional[str]:
+        """
+        根据加密协议生成 Shadowsocks 密码
+        参数:
+            method: 加密协议 (2022-blake3-aes-128-gcm, 2022-blake3-aes-256-gcm, 2022-blake3-chacha20-poly1305)
+        返回:
+            Base64编码的密码，失败返回None
+        """
+        import subprocess
+        
+        # 定义支持的加密协议及其密钥长度
+        method_key_length = {
+            "2022-blake3-aes-128-gcm": 16,
+            "2022-blake3-aes-256-gcm": 32,
+            "2022-blake3-chacha20-poly1305": 32
+        }
+        
+        if method not in method_key_length:
+            logger.error(f"不支持的加密协议: {method}")
+            return None
+        
+        key_length = method_key_length[method]
+        
+        try:
+            # 使用 openssl 生成随机密钥
+            result = subprocess.run(
+                ["openssl", "rand", "-base64", str(key_length)],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0:
+                password = result.stdout.strip()
+                logger.debug(f"成功生成 {method} 密码")
+                return password
+            else:
+                logger.error(f"openssl 生成密码失败: {result.stderr}")
+                return None
+                
+        except FileNotFoundError:
+            logger.error("未找到 openssl 命令，请确保已安装 OpenSSL")
+            return None
+        except subprocess.TimeoutExpired:
+            logger.error("openssl 命令执行超时")
+            return None
+        except Exception as e:
+            logger.error(f"生成密码时发生错误: {str(e)}")
+            return None
+    
     def add_client(self, inbound_id: int, email: str) -> bool:
         """
         添加客户端到入站节点
@@ -431,55 +481,24 @@ class XUIClient:
         
         # 先检查客户端是否已存在
         inbound_info = self.get_inbound_info(inbound_id)
-        if inbound_info:
-            client_stats = inbound_info.get('clientStats', [])
-            for client_stat in client_stats:
-                if client_stat.get('email') == email:
-                    # 客户端已存在，更新配置
-                    logger.info(f"客户端 {email} 已存在于节点 {inbound_id}，执行更新操作")
-                    client_uuid = client_stat.get('uuid')
-                    if not client_uuid:
-                        logger.error(f"无法获取客户端UUID")
-                        return False
-                    
-                    # 构建客户端数据
-                    import random
-                    import string
-                    import time
-                    
-                    # 生成新的subId
-                    sub_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
-                    current_time = int(time.time() * 1000)
-                    
-                    # 获取默认flow值
-                    flow = self.get_default_client_flow(inbound_id)
-                    
-                    client_data = {
-                        "id": client_uuid,
-                        "flow": flow,
-                        "email": email,
-                        "limitIp": 0,
-                        "totalGB": 0,
-                        "expiryTime": 0,
-                        "enable": True,
-                        "tgId": "",
-                        "subId": sub_id,
-                        "comment": "",
-                        "reset": 0,
-                        "created_at": current_time,
-                        "updated_at": current_time
-                    }
-                    
-                    return self.update_client(client_uuid, inbound_id, client_data)
-        
-        # 客户端不存在，添加新客户端
-        add_url = f"{self.base_url}/panel/api/inbounds/addClient"
-        
-        # 生成UUID
-        client_uuid = self.get_new_uuid()
-        if not client_uuid:
-            logger.error(f"生成UUID失败")
+        if not inbound_info:
+            logger.error(f"无法获取节点信息: {inbound_id}")
             return False
+            
+        client_stats = inbound_info.get('clientStats', [])
+        for client_stat in client_stats:
+            if client_stat.get('email') == email:
+                # 客户端已存在，执行删除操作
+                logger.info(f"客户端 {email} 已存在于节点 {inbound_id}，执行删除操作")
+                if not self.delete_client(inbound_id, email):
+                    return False
+                break  # 删除后继续添加新客户端
+        
+        # 获取协议类型
+        protocol = inbound_info.get('protocol', '').lower()
+        logger.info(f"节点 {inbound_id} 协议类型: {protocol}")
+        
+        add_url = f"{self.base_url}/panel/api/inbounds/addClient"
         
         # 生成subId
         import random
@@ -490,25 +509,69 @@ class XUIClient:
         import time
         current_time = int(time.time() * 1000)
         
-        # 获取默认flow值
-        flow = self.get_default_client_flow(inbound_id)
-        
-        # 构建客户端数据
-        client_data = {
-            "id": client_uuid,
-            "flow": flow,
-            "email": email,
-            "limitIp": 0,
-            "totalGB": 0,
-            "expiryTime": 0,
-            "enable": True,
-            "tgId": "",
-            "subId": sub_id,
-            "comment": "",
-            "reset": 0,
-            "created_at": current_time,
-            "updated_at": current_time
-        }
+        # 根据协议类型构建客户端数据
+        if protocol == 'shadowsocks':
+            # Shadowsocks 协议：需要 password，根据加密方法生成
+            try:
+                settings = json.loads(inbound_info.get('settings', '{}'))
+                method = settings.get('method', '')
+                
+                if not method:
+                    logger.error(f"节点 {inbound_id} 缺少加密方法配置")
+                    return False
+                
+                # 生成密码
+                password = self.generate_shadowsocks_password(method)
+                if not password:
+                    logger.error(f"生成 Shadowsocks 密码失败，加密方法: {method}")
+                    return False
+                
+                # 构建客户端数据
+                client_data = {
+                    "email": email,
+                    "password": password,
+                    "method": "",  # 留空，使用全局配置
+                    "limitIp": 0,
+                    "totalGB": 0,
+                    "expiryTime": 0,
+                    "enable": True,
+                    "tgId": "",
+                    "subId": sub_id,
+                    "comment": "",
+                    "reset": 0,
+                    "created_at": current_time,
+                    "updated_at": current_time
+                }
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"解析节点 {inbound_id} 配置失败: {str(e)}")
+                return False
+                
+        else:
+            client_uuid = self.get_new_uuid()
+            if not client_uuid:
+                logger.error(f"生成UUID失败")
+                return False
+            
+            # 获取默认flow值
+            flow = self.get_default_client_flow(inbound_id)
+            
+            # 构建客户端数据
+            client_data = {
+                "id": client_uuid,
+                "flow": flow,
+                "email": email,
+                "limitIp": 0,
+                "totalGB": 0,
+                "expiryTime": 0,
+                "enable": True,
+                "tgId": "",
+                "subId": sub_id,
+                "comment": "",
+                "reset": 0,
+                "created_at": current_time,
+                "updated_at": current_time
+            }
         
         # 准备请求数据
         payload = {
@@ -536,7 +599,7 @@ class XUIClient:
                     return False
                 
                 if data.get('success'):
-                    logger.info(f"成功添加客户端: {email} 到节点 {inbound_id}")
+                    logger.info(f"成功添加客户端: {email} 到节点 {inbound_id} (协议: {protocol})")
                     # 清除缓存，以便下次获取最新数据
                     if self.board_name:
                         inbounds_cache.clear(self.board_name)
