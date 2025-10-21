@@ -134,13 +134,13 @@ class TrafficScheduler:
                     # 获取用户套餐信息
                     package = Package.query.get(user.package_id)
                     if not package:
-                        logger.warning(f"用户 {user.email} 的套餐不存在")
+                        logger.debug(f"用户 {user.email} 的套餐不存在")
                         continue
                     
                     # 获取套餐关联的节点及流量倍率
                     package_nodes = PackageNode.query.filter_by(package_id=package.id).all()
                     if not package_nodes:
-                        logger.warning(f"套餐 {package.name} 没有关联任何节点")
+                        logger.debug(f"套餐 {package.name} 没有关联任何节点")
                         continue
                     
                     # 获取用户在所有节点的流量数据
