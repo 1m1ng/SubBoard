@@ -176,11 +176,15 @@ def edit_package(package_id):
     package.total_traffic = total_traffic * 1024 * 1024 * 1024  # 转换为字节
     
     try:
-        # 删除旧的节点关联
-        PackageNode.query.filter_by(package_id=package_id).delete()
+        # 获取旧的节点列表（用于比较变化）
+        old_nodes_list = PackageNode.query.filter_by(package_id=package_id).all()
+        old_nodes = {(node.board_name, node.inbound_id): node for node in old_nodes_list}
         
-        # 添加新的节点关联
+        # 解析新的节点列表
         selected_nodes = request.form.getlist('nodes[]')
+        new_nodes = {}
+        new_nodes_list = []
+        
         for node_data in selected_nodes:
             # 格式: board_name|inbound_id|node_name
             parts = node_data.split('|')
@@ -200,18 +204,65 @@ def edit_package(package_id):
                 traffic_rate = float(traffic_rate)
             except ValueError:
                 traffic_rate = 1.0
-
+            
+            # 保存新节点的键和数据
+            node_key = (board_name, inbound_id)
+            new_nodes[node_key] = {
+                'board_name': board_name,
+                'inbound_id': inbound_id,
+                'node_name': node_name,
+                'traffic_rate': traffic_rate
+            }
+            new_nodes_list.append(node_key)
+        
+        # 比较节点变化
+        old_node_keys = set(old_nodes.keys())
+        new_node_keys = set(new_nodes.keys())
+        
+        # 找出删除的节点和新增的节点
+        removed_nodes = old_node_keys - new_node_keys
+        added_nodes = new_node_keys - old_node_keys
+        
+        # 获取套餐内所有用户的邮箱列表
+        from models import User
+        package_users = User.query.filter_by(package_id=package_id).all()
+        user_emails = [user.email for user in package_users]
+        
+        # 如果有节点变化且有用户，处理客户端的增删
+        if (removed_nodes or added_nodes) and user_emails:
+            xui_manager = get_xui_manager()
+            if xui_manager:
+                # 处理删除的节点：从这些节点中删除所有用户的客户端
+                for node_key in removed_nodes:
+                    board_name, inbound_id = node_key
+                    logger.info(f"从节点 {board_name}/{inbound_id} 删除 {len(user_emails)} 个客户端")
+                    xui_manager.delete_clients_from_node(board_name, inbound_id, user_emails)
+                
+                # 处理新增的节点：向这些节点添加所有用户的客户端
+                for node_key in added_nodes:
+                    board_name, inbound_id = node_key
+                    logger.info(f"向节点 {board_name}/{inbound_id} 添加 {len(user_emails)} 个客户端")
+                    xui_manager.add_clients_to_node(board_name, inbound_id, user_emails)
+            else:
+                logger.warning("XUI管理器未初始化，无法同步客户端变化")
+        
+        # 删除旧的节点关联
+        PackageNode.query.filter_by(package_id=package_id).delete()
+        
+        # 添加新的节点关联
+        for node_key in new_nodes_list:
+            node_data = new_nodes[node_key]
             package_node = PackageNode(
                 package_id=package.id,      # type: ignore
-                board_name=board_name,      # type: ignore
-                inbound_id=inbound_id,      # type: ignore
-                node_name=node_name,        # type: ignore
-                traffic_rate=traffic_rate   # type: ignore
+                board_name=node_data['board_name'],      # type: ignore
+                inbound_id=node_data['inbound_id'],      # type: ignore
+                node_name=node_data['node_name'],        # type: ignore
+                traffic_rate=node_data['traffic_rate']   # type: ignore
             )
             db.session.add(package_node)
         
         db.session.commit()
-        logger.info(f'管理员编辑了套餐: {name}')
+        logger.info(f'管理员编辑了套餐: {name}，节点变化：删除 {len(removed_nodes)} 个，新增 {len(added_nodes)} 个')
         flash(f'套餐 {name} 已更新！', 'success')
     except Exception as e:
         db.session.rollback()
@@ -226,18 +277,57 @@ def edit_package(package_id):
 def delete_package(package_id):
     """删除套餐"""
     package = db.session.get(Package, package_id)
-    if package:
-        # 检查是否有用户正在使用此套餐
-        if package.users:
-            flash(f'套餐 {package.name} 正在被 {len(package.users)} 个用户使用，无法删除！', 'error') # type: ignore
-            return redirect(url_for('packages.packages'))
+    if not package:
+        flash('套餐不存在！', 'error')
+        return redirect(url_for('packages.packages'))
+    
+    from models import User
+    
+    # 获取使用此套餐的所有用户
+    package_users = User.query.filter_by(package_id=package_id).all()
+    
+    # 获取套餐的所有节点
+    package_nodes = PackageNode.query.filter_by(package_id=package_id).all()
+    
+    name = package.name
+    
+    try:
+        # 如果有用户正在使用此套餐，先删除这些用户在所有节点的客户端
+        if package_users and package_nodes:
+            xui_manager = get_xui_manager()
+            if xui_manager:
+                user_emails = [user.email for user in package_users]
+                logger.info(f"删除套餐 {name}，开始清理 {len(user_emails)} 个用户在 {len(package_nodes)} 个节点的客户端")
+                
+                # 遍历所有节点，删除所有用户的客户端
+                for node in package_nodes:
+                    board_name = node.board_name
+                    inbound_id = node.inbound_id
+                    logger.info(f"从节点 {board_name}/{inbound_id} 删除 {len(user_emails)} 个客户端")
+                    xui_manager.delete_clients_from_node(board_name, inbound_id, user_emails)
+                
+                logger.info(f"套餐 {name} 的客户端清理完成")
+            else:
+                logger.warning("XUI管理器未初始化，无法清理客户端")
         
-        name = package.name
+        # 将所有用户的套餐ID设置为NULL
+        if package_users:
+            for user in package_users:
+                user.package_id = None
+                user.package_expire_time = None
+                user.next_reset_time = None
+            db.session.flush()
+            logger.info(f"已将 {len(package_users)} 个用户从套餐 {name} 中移除")
+        
+        # 删除套餐（级联删除会自动删除 PackageNode）
         db.session.delete(package)
         db.session.commit()
-        logger.info(f'管理员删除了套餐: {name}')
+        
+        logger.info(f'管理员删除了套餐: {name}，包含 {len(package_nodes)} 个节点')
         flash(f'套餐 {name} 已被删除！', 'success')
-    else:
-        flash('套餐不存在！', 'error')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"删除套餐失败: {str(e)}")
+        flash(f'删除套餐失败: {str(e)}', 'error')
     
     return redirect(url_for('packages.packages'))

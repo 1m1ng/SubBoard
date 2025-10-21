@@ -993,3 +993,55 @@ class XUIManager:
         
         logger.info(f"从套餐节点删除客户端完成: 成功 {success_count}/{total_count}")
         return success_count == total_count
+    
+    def add_clients_to_node(self, board_name: str, inbound_id: int, email_list: List[str]) -> bool:
+        """
+        批量添加多个客户端到指定节点
+        参数:
+            board_name: 面板名称
+            inbound_id: 入站节点ID
+            email_list: 客户端邮箱列表
+        返回:
+            是否全部成功
+        """
+        client = self.clients.get(board_name)
+        if not client:
+            logger.error(f"未找到面板: {board_name}")
+            return False
+        
+        success_count = 0
+        for email in email_list:
+            if client.add_client(inbound_id, email):
+                success_count += 1
+                logger.info(f"成功添加客户端 {email} 到面板 {board_name} 节点 {inbound_id}")
+            else:
+                logger.error(f"添加客户端 {email} 到面板 {board_name} 节点 {inbound_id} 失败")
+        
+        logger.info(f"批量添加客户端到节点完成: 成功 {success_count}/{len(email_list)}")
+        return success_count == len(email_list)
+    
+    def delete_clients_from_node(self, board_name: str, inbound_id: int, email_list: List[str]) -> bool:
+        """
+        批量从指定节点删除多个客户端
+        参数:
+            board_name: 面板名称
+            inbound_id: 入站节点ID
+            email_list: 客户端邮箱列表
+        返回:
+            是否全部成功
+        """
+        client = self.clients.get(board_name)
+        if not client:
+            logger.error(f"未找到面板: {board_name}")
+            return False
+        
+        success_count = 0
+        for email in email_list:
+            if client.delete_client(inbound_id, email):
+                success_count += 1
+                logger.info(f"成功删除客户端 {email} 从面板 {board_name} 节点 {inbound_id}")
+            else:
+                logger.warning(f"删除客户端 {email} 从面板 {board_name} 节点 {inbound_id} 失败")
+        
+        logger.info(f"批量从节点删除客户端完成: 成功 {success_count}/{len(email_list)}")
+        return success_count == len(email_list)
