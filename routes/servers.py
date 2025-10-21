@@ -2,7 +2,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from datetime import datetime
 from extensions import db, logger
-from models import ServerConfig
+from models import ServerConfig, PackageNode  # 添加导入
 from utils.xui import reload_xui_manager, get_xui_manager
 from utils.cache import inbounds_cache
 from utils.decorators import admin_required
@@ -150,6 +150,11 @@ def delete_server(board_name):
     server_config = ServerConfig.query.filter_by(board_name=board_name).first()
     if not server_config:
         flash(f'服务器 {board_name} 不存在！', 'error')
+        return redirect(url_for('servers.servers'))
+
+    # 检查是否有套餐使用了该服务器的入站节点
+    if PackageNode.query.filter_by(board_name=board_name).first():
+        flash(f'服务器 {board_name} 有关联的套餐节点，无法删除！', 'error')
         return redirect(url_for('servers.servers'))
 
     # 删除服务器
