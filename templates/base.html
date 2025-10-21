@@ -143,7 +143,7 @@
                     {% for category, message in messages %}
                         <div class="alert alert-{{ category }}">
                             <span class="alert-icon">
-                                {% if category == 'success' %}✓{% elif category == 'error' %}✗{% else %}ℹ{% endif %}
+                                {% if category == 'success' %}✓{% elif category == 'error' %}✗{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}
                             </span>
                             {{ message }}
                         </div>

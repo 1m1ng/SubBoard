@@ -4,6 +4,7 @@ from extensions import db, logger
 from models import User, IPBlock, Package
 from utils.decorators import admin_required
 from datetime import datetime, timedelta
+from utils.xui import get_xui_manager
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -88,6 +89,17 @@ def create_user():
     db.session.add(user)
     db.session.commit()
     
+    # 如果分配了套餐，添加用户到套餐节点
+    if package_id:
+        xui_manager = get_xui_manager()
+        if xui_manager and not xui_manager.add_client_to_package_nodes(email, int(package_id)):
+            logger.warning(f'添加用户 {username} 到套餐节点时部分失败')
+            flash(f'用户 {username} 创建成功，但添加到部分节点失败！', 'warning')
+        elif xui_manager:
+            logger.info(f'成功添加用户 {username} 到套餐所有节点')
+        else:
+            logger.warning(f'XUI管理器未初始化，无法添加用户到套餐节点')
+    
     logger.info(f'管理员创建了新用户: {username} (Email: {email}), 管理员权限: {is_admin}')
     flash(f'用户 {username} 创建成功！', 'success')
     return redirect(url_for('admin.admin'))
@@ -138,6 +150,9 @@ def edit_user(user_id):
     elif password and len(password) < 6:
         flash('密码长度至少为6位，密码未更新！', 'error')
     
+    # 记录原套餐ID
+    old_package_id = user.package_id
+    
     # 更新套餐信息
     if package_id:
         user.package_id = int(package_id)
@@ -177,8 +192,36 @@ def edit_user(user_id):
     
     db.session.commit()
     
+    # 处理套餐变动
+    new_package_id = user.package_id
+    
+    # 检查套餐是否发生变化
+    if old_package_id != new_package_id:
+        xui_manager = get_xui_manager()
+        if not xui_manager:
+            logger.warning(f'XUI管理器未初始化，无法处理套餐节点变更')
+            flash(f'用户 {username} 信息已更新，但XUI管理器未初始化！', 'warning')
+        else:
+            # 先从旧套餐节点删除用户
+            if old_package_id:
+                logger.info(f'用户 {username} 套餐变更，从旧套餐 {old_package_id} 节点删除客户端')
+                if not xui_manager.delete_client_from_package_nodes(email, old_package_id):
+                    logger.warning(f'从旧套餐节点删除用户 {username} 时部分失败')
+            
+            # 再添加到新套餐节点
+            if new_package_id:
+                logger.info(f'用户 {username} 套餐变更，添加到新套餐 {new_package_id} 节点')
+                if not xui_manager.add_client_to_package_nodes(email, new_package_id):
+                    logger.warning(f'添加用户 {username} 到新套餐节点时部分失败')
+                    flash(f'用户 {username} 信息已更新，但添加到部分节点失败！', 'warning')
+                else:
+                    flash(f'用户 {username} 信息已更新！', 'success')
+            else:
+                flash(f'用户 {username} 信息已更新！', 'success')
+    else:
+        flash(f'用户 {username} 信息已更新！', 'success')
+    
     logger.info(f'管理员编辑了用户: {username}')
-    flash(f'用户 {username} 信息已更新！', 'success')
     return redirect(url_for('admin.admin'))
 
 

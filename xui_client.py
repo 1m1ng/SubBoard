@@ -8,6 +8,7 @@ from typing import Dict, Optional, List
 import base64
 import json
 import urllib3
+from utils.cache import inbounds_cache
 
 # 禁用SSL警告（用于自签名证书）
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -141,7 +142,6 @@ class XUIClient:
         """
         # 先从缓存的入站列表中查找
         if self.board_name:
-            from utils.cache import inbounds_cache
             cached_inbound = inbounds_cache.find_inbound(self.board_name, inbound_id)
             if cached_inbound:
                 return cached_inbound
@@ -164,7 +164,6 @@ class XUIClient:
         """
         # 如果有 board_name，尝试从缓存获取
         if self.board_name:
-            from utils.cache import inbounds_cache
             cached_data, from_cache, cache_age = inbounds_cache.get_board(self.board_name)
             if from_cache:
                 logger.debug(f"使用缓存的入站列表 {self.board_name}，缓存年龄: {cache_age}秒")
@@ -207,7 +206,6 @@ class XUIClient:
                     
                     # 保存到缓存
                     if self.board_name and inbounds_list:
-                        from utils.cache import inbounds_cache
                         inbounds_cache.set_board(self.board_name, inbounds_list)
                         logger.debug(f"已缓存入站列表 {self.board_name}，共 {len(inbounds_list)} 个节点")
                     
@@ -330,6 +328,294 @@ class XUIClient:
                     
             except Exception as e:
                 logger.error(f"重置客户端流量时发生错误: {str(e)}")
+                if attempt == 0:
+                    self.logged_in = False
+                    if self.login():
+                        continue
+                return False
+        
+        return False
+    
+    def get_new_uuid(self) -> Optional[str]:
+        """
+        生成新的UUID
+        返回:
+            UUID字符串，失败返回None
+        """
+        if not self.logged_in:
+            if not self.login():
+                return None
+        
+        uuid_url = f"{self.base_url}/panel/api/server/getNewUUID"
+        
+        for attempt in range(2):
+            try:
+                response = self.session.get(uuid_url, verify=False, timeout=10)
+                
+                if response.status_code == 401 or response.status_code == 403:
+                    logger.warning(f"Session 可能已过期 {self.server}:{self.port}，尝试重新登录...")
+                    self.logged_in = False
+                    if attempt == 0 and self.login():
+                        continue
+                    return None
+                
+                try:
+                    data = response.json()
+                except ValueError:
+                    logger.error(f"获取UUID响应JSON解析失败 {self.server}:{self.port}")
+                    return None
+                
+                if data.get('success'):
+                    uuid = data.get('obj', {}).get('uuid')
+                    if uuid:
+                        logger.debug(f"成功生成UUID: {uuid}")
+                        return uuid
+                    else:
+                        logger.error(f"UUID响应数据格式错误")
+                        return None
+                else:
+                    logger.warning(f"生成UUID失败: {data.get('msg')}")
+                    return None
+                    
+            except Exception as e:
+                logger.error(f"生成UUID时发生错误: {str(e)}")
+                if attempt == 0:
+                    self.logged_in = False
+                    if self.login():
+                        continue
+                return None
+        
+        return None
+    
+    def get_default_client_flow(self, inbound_id: int) -> str:
+        """
+        获取入站节点的默认客户端flow值
+        参数:
+            inbound_id: 入站节点ID
+        返回:
+            flow值，失败返回空字符串
+        """
+        inbound_info = self.get_inbound_info(inbound_id)
+        if not inbound_info:
+            return ""
+        
+        try:
+            settings = json.loads(inbound_info.get('settings', '{}'))
+            clients = settings.get('clients', [])
+            
+            for client in clients:
+                if client.get('email') == 'default':
+                    return client.get('flow', '')
+            
+            # 如果没有找到default客户端，返回第一个客户端的flow
+            if clients:
+                return clients[0].get('flow', '')
+            
+        except Exception as e:
+            logger.error(f"解析入站节点设置失败: {str(e)}")
+        
+        return ""
+    
+    def add_client(self, inbound_id: int, email: str) -> bool:
+        """
+        添加客户端到入站节点
+        参数:
+            inbound_id: 入站节点ID
+            email: 客户端邮箱
+        返回:
+            是否成功
+        """
+        if not self.logged_in:
+            if not self.login():
+                return False
+        
+        # 先检查客户端是否已存在
+        inbound_info = self.get_inbound_info(inbound_id)
+        if inbound_info:
+            client_stats = inbound_info.get('clientStats', [])
+            for client_stat in client_stats:
+                if client_stat.get('email') == email:
+                    # 客户端已存在，更新配置
+                    logger.info(f"客户端 {email} 已存在于节点 {inbound_id}，执行更新操作")
+                    client_uuid = client_stat.get('uuid')
+                    if not client_uuid:
+                        logger.error(f"无法获取客户端UUID")
+                        return False
+                    
+                    # 构建客户端数据
+                    import random
+                    import string
+                    import time
+                    
+                    # 生成新的subId
+                    sub_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+                    current_time = int(time.time() * 1000)
+                    
+                    # 获取默认flow值
+                    flow = self.get_default_client_flow(inbound_id)
+                    
+                    client_data = {
+                        "id": client_uuid,
+                        "flow": flow,
+                        "email": email,
+                        "limitIp": 0,
+                        "totalGB": 0,
+                        "expiryTime": 0,
+                        "enable": True,
+                        "tgId": "",
+                        "subId": sub_id,
+                        "comment": "",
+                        "reset": 0,
+                        "created_at": current_time,
+                        "updated_at": current_time
+                    }
+                    
+                    return self.update_client(client_uuid, inbound_id, client_data)
+        
+        # 客户端不存在，添加新客户端
+        add_url = f"{self.base_url}/panel/api/inbounds/addClient"
+        
+        # 生成UUID
+        client_uuid = self.get_new_uuid()
+        if not client_uuid:
+            logger.error(f"生成UUID失败")
+            return False
+        
+        # 生成subId
+        import random
+        import string
+        sub_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+        
+        # 获取当前时间戳（毫秒）
+        import time
+        current_time = int(time.time() * 1000)
+        
+        # 获取默认flow值
+        flow = self.get_default_client_flow(inbound_id)
+        
+        # 构建客户端数据
+        client_data = {
+            "id": client_uuid,
+            "flow": flow,
+            "email": email,
+            "limitIp": 0,
+            "totalGB": 0,
+            "expiryTime": 0,
+            "enable": True,
+            "tgId": "",
+            "subId": sub_id,
+            "comment": "",
+            "reset": 0,
+            "created_at": current_time,
+            "updated_at": current_time
+        }
+        
+        # 准备请求数据
+        payload = {
+            'id': inbound_id,
+            'settings': json.dumps({"clients": [client_data]})
+        }
+        
+        logger.debug(f"添加客户端请求数据: {payload}")
+        
+        for attempt in range(2):
+            try:
+                response = self.session.post(add_url, json=payload, verify=False, timeout=10)
+                
+                if response.status_code == 401 or response.status_code == 403:
+                    logger.warning(f"Session 可能已过期 {self.server}:{self.port}，尝试重新登录...")
+                    self.logged_in = False
+                    if attempt == 0 and self.login():
+                        continue
+                    return False
+                
+                try:
+                    data = response.json()
+                except ValueError as e:
+                    logger.error(f"添加客户端响应JSON解析失败 {self.server}:{self.port}: {response.text}")
+                    return False
+                
+                if data.get('success'):
+                    logger.info(f"成功添加客户端: {email} 到节点 {inbound_id}")
+                    # 清除缓存，以便下次获取最新数据
+                    if self.board_name:
+                        inbounds_cache.clear(self.board_name)
+                    return True
+                else:
+                    logger.warning(f"添加客户端失败: {data.get('msg')}")
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"添加客户端时发生错误: {str(e)}")
+                if attempt == 0:
+                    self.logged_in = False
+                    if self.login():
+                        continue
+                return False
+        
+        return False
+    
+    def delete_client(self, inbound_id: int, email: str) -> bool:
+        """
+        从入站节点删除客户端
+        参数:
+            inbound_id: 入站节点ID
+            email: 客户端邮箱
+        返回:
+            是否成功
+        """
+        if not self.logged_in:
+            if not self.login():
+                return False
+        
+        # 先获取客户端UUID
+        inbound_info = self.get_inbound_info(inbound_id)
+        if not inbound_info:
+            logger.error(f"无法获取节点信息，inbound_id: {inbound_id}")
+            return False
+        
+        client_stats = inbound_info.get('clientStats', [])
+        client_uuid = None
+        for client_stat in client_stats:
+            if client_stat.get('email') == email:
+                client_uuid = client_stat.get('uuid')
+                break
+        
+        if not client_uuid:
+            logger.warning(f"未找到客户端 {email} 在节点 {inbound_id} 中")
+            return False
+        
+        delete_url = f"{self.base_url}/panel/api/inbounds/{inbound_id}/delClient/{client_uuid}"
+        
+        for attempt in range(2):
+            try:
+                response = self.session.post(delete_url, verify=False, timeout=10)
+                
+                if response.status_code == 401 or response.status_code == 403:
+                    logger.warning(f"Session 可能已过期 {self.server}:{self.port}，尝试重新登录...")
+                    self.logged_in = False
+                    if attempt == 0 and self.login():
+                        continue
+                    return False
+                
+                try:
+                    data = response.json()
+                except ValueError:
+                    logger.error(f"删除客户端响应JSON解析失败 {self.server}:{self.port}")
+                    return False
+                
+                if data.get('success'):
+                    logger.info(f"成功删除客户端: {email} 从节点 {inbound_id}")
+                    # 清除缓存，以便下次获取最新数据
+                    if self.board_name:
+                        inbounds_cache.clear(self.board_name)
+                    return True
+                else:
+                    logger.warning(f"删除客户端失败: {data.get('msg')}")
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"删除客户端时发生错误: {str(e)}")
                 if attempt == 0:
                     self.logged_in = False
                     if self.login():
@@ -613,3 +899,97 @@ class XUIManager:
             return False
         
         return client.reset_client_traffic(inbound_id, email)
+    
+    def add_client_to_package_nodes(self, email: str, package_id: int) -> bool:
+        """
+        将用户添加到套餐内的所有节点
+        参数:
+            email: 用户邮箱
+            package_id: 套餐ID
+        返回:
+            是否全部成功
+        """
+        from models import Package
+        package = Package.query.get(package_id)
+        if not package:
+            logger.error(f"未找到套餐: {package_id}")
+            return False
+        
+        # 获取套餐节点列表
+        nodes = package.nodes
+        if not nodes:
+            logger.warning(f"套餐 {package_id} 没有配置节点")
+            return True
+        
+        success_count = 0
+        total_count = 0
+        
+        for node in nodes:
+            board_name = node.board_name
+            inbound_id = node.inbound_id
+            
+            if not board_name or not inbound_id:
+                logger.warning(f"节点配置缺少必要字段: {node}")
+                continue
+            
+            total_count += 1
+            client = self.clients.get(board_name)
+            if not client:
+                logger.error(f"未找到面板: {board_name}")
+                continue
+            
+            if client.add_client(inbound_id, email):
+                success_count += 1
+                logger.info(f"成功添加客户端 {email} 到面板 {board_name} 节点 {inbound_id}")
+            else:
+                logger.error(f"添加客户端 {email} 到面板 {board_name} 节点 {inbound_id} 失败")
+        
+        logger.info(f"添加客户端到套餐节点完成: 成功 {success_count}/{total_count}")
+        return success_count == total_count
+    
+    def delete_client_from_package_nodes(self, email: str, package_id: int) -> bool:
+        """
+        从套餐内的所有节点删除用户
+        参数:
+            email: 用户邮箱
+            package_id: 套餐ID
+        返回:
+            是否全部成功
+        """
+        from models import Package
+        package = Package.query.get(package_id)
+        if not package:
+            logger.error(f"未找到套餐: {package_id}")
+            return False
+        
+        # 获取套餐节点列表
+        nodes = package.nodes
+        if not nodes:
+            logger.warning(f"套餐 {package_id} 没有配置节点")
+            return True
+        
+        success_count = 0
+        total_count = 0
+        
+        for node in nodes:
+            board_name = node.board_name
+            inbound_id = node.inbound_id
+            
+            if not board_name or not inbound_id:
+                logger.warning(f"节点配置缺少必要字段: {node}")
+                continue
+            
+            total_count += 1
+            client = self.clients.get(board_name)
+            if not client:
+                logger.error(f"未找到面板: {board_name}")
+                continue
+            
+            if client.delete_client(inbound_id, email):
+                success_count += 1
+                logger.info(f"成功删除客户端 {email} 从面板 {board_name} 节点 {inbound_id}")
+            else:
+                logger.warning(f"删除客户端 {email} 从面板 {board_name} 节点 {inbound_id} 失败")
+        
+        logger.info(f"从套餐节点删除客户端完成: 成功 {success_count}/{total_count}")
+        return success_count == total_count

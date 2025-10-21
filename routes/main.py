@@ -1,12 +1,11 @@
 """主页路由"""
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, g
+from flask import Blueprint, render_template, redirect, url_for, flash, jsonify, g
 from extensions import db, logger
 from models import User, Package
 from utils.cache import inbounds_cache
 from utils.xui import get_xui_manager
-from utils.decorators import login_required, admin_required
+from utils.decorators import login_required
 from datetime import datetime
-import time
 
 main_bp = Blueprint('main', __name__)
 
