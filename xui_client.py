@@ -766,37 +766,25 @@ class XUIManager:
                         
                         # 检查是否包含 # 备注部分
                         if '#' in line:
-                            # 使用 rsplit 确保只在最后一个 # 处分割（因为 URL 中可能包含 #）
-                            url_part, remark = line.rsplit('#', 1)
+                            url_part, remark = line.split('#', 1)
                             
-                            # URL 解码备注（邮箱可能被编码为 %40 等）
-                            from urllib.parse import unquote
-                            decoded_remark = unquote(remark)
-                            
-                            # 查找邮箱在备注中的位置（在解码后的备注中查找）
-                            if email in decoded_remark:
+                            # 查找邮箱在备注中的位置
+                            if email in remark:
                                 # 找到邮箱前面的 "-" 位置
-                                email_index = decoded_remark.find(email)
-                                if email_index > 0 and decoded_remark[email_index - 1] == '-':
+                                email_index = remark.find(email)
+                                if email_index > 0 and remark[email_index - 1] == '-':
                                     # 删除从 "-邮箱" 开始到结尾的所有内容
-                                    cleaned_remark = decoded_remark[:email_index - 1].strip()
+                                    remark = remark[:email_index - 1]
                                 elif email_index == 0:
                                     # 如果邮箱就在开头，删除整个备注
-                                    cleaned_remark = ''
+                                    remark = ''
                                 else:
                                     # 如果邮箱前面不是 "-"，只删除邮箱及其后面的内容
-                                    cleaned_remark = decoded_remark[:email_index].rstrip('-').strip()
-                                
-                                # URL 编码清理后的备注
-                                from urllib.parse import quote
-                                encoded_remark = quote(cleaned_remark, safe='')
-                            else:
-                                # 没有找到邮箱，保持原样
-                                encoded_remark = remark
+                                    remark = remark[:email_index].rstrip('-')
                             
                             # 重新组合节点信息
-                            if encoded_remark:
-                                processed_lines.append(f"{url_part}#{encoded_remark}")
+                            if remark:
+                                processed_lines.append(f"{url_part}#{remark}")
                             else:
                                 processed_lines.append(url_part)
                         else:
