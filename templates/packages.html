@@ -26,7 +26,17 @@
             </div>
             
             <div class="form-group">
-                <label>可用节点</label>
+                <div class="label-with-button">
+                    <label>可用节点</label>
+                    <button type="button" class="btn-refresh" onclick="refreshAllNodes('create')" title="刷新所有节点">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        刷新
+                    </button>
+                </div>
                 <div class="nodes-selection">
                     {% for server in servers %}
                     <div class="server-group">
@@ -105,7 +115,17 @@
             </div>
             
             <div class="form-group">
-                <label>可用节点</label>
+                <div class="label-with-button">
+                    <label>可用节点</label>
+                    <button type="button" class="btn-refresh" onclick="refreshAllNodes('edit')" title="刷新所有节点">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        刷新
+                    </button>
+                </div>
                 <div class="nodes-selection">
                     {% for server in servers %}
                     <div class="server-group">
@@ -133,6 +153,64 @@
 // 存储已加载的节点数据
 const nodesCache = {};
 const loadedServers = {};
+
+// 刷新所有节点（清除缓存并重新加载）
+async function refreshAllNodes(formType) {
+    const refreshBtn = event.target.closest('.btn-refresh');
+    const originalHTML = refreshBtn.innerHTML;
+    
+    // 禁用按钮并显示加载状态
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = `
+        <svg class="icon spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+        刷新中...
+    `;
+    
+    try {
+        // 调用后端刷新接口
+        const response = await fetch('/packages/refresh_nodes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // 清除本地缓存
+            Object.keys(nodesCache).forEach(key => delete nodesCache[key]);
+            Object.keys(loadedServers).forEach(key => {
+                if (key.startsWith(formType + '_')) {
+                    delete loadedServers[key];
+                }
+            });
+            
+            // 重新加载所有已展开的节点
+            const servers = {{ servers | map(attribute='board_name') | list | tojson }};
+            for (const boardName of servers) {
+                const nodesList = document.getElementById(`${formType}_nodes_${boardName}`);
+                if (nodesList && nodesList.style.display !== 'none') {
+                    await loadNodes(formType, boardName);
+                    loadedServers[`${formType}_${boardName}`] = true;
+                }
+            }
+        } else {
+            alert('刷新失败: ' + (data.message || '未知错误'));
+        }
+    } catch (error) {
+        console.error('刷新节点失败:', error);
+        alert('刷新失败: ' + error.message);
+    } finally {
+        // 恢复按钮状态
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalHTML;
+    }
+}
 
 // 切换服务器节点显示
 async function toggleServerNodes(formType, boardName) {

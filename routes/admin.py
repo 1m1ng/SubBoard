@@ -5,6 +5,7 @@ from models import User, IPBlock, Package
 from utils.decorators import admin_required
 from datetime import datetime, timedelta
 from utils.xui import get_xui_manager
+from utils.cache import inbounds_cache
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -218,6 +219,13 @@ def edit_user(user_id):
                     flash(f'用户 {username} 信息已更新！', 'success')
             else:
                 flash(f'用户 {username} 信息已更新！', 'success')
+            
+            # 刷新入站列表缓存（套餐发生变化时）
+            logger.info(f'用户套餐编辑后刷新缓存')
+            all_inbounds = xui_manager.get_all_inbounds()
+            if all_inbounds:
+                inbounds_cache.set_aggregated(all_inbounds)
+                logger.info(f'已刷新入站列表缓存，共 {len(all_inbounds)} 个节点')
     else:
         flash(f'用户 {username} 信息已更新！', 'success')
     
