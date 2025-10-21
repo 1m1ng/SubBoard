@@ -123,8 +123,8 @@
         </div>
     {% endif %}
 
-    <!-- 订阅管理按钮 -->
-    {% if subscription_url and package and user.package_expire_time and user.package_expire_time > now %}
+    <!-- 订阅管理按钮：允许无限期套餐（package_expire_time 为 None）时也显示按钮 -->
+    {% if subscription_url and package and (user.package_expire_time is none or user.package_expire_time > now) %}
     <div class="subscription-actions">
         <button class="btn btn-success" onclick="copySubscription()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

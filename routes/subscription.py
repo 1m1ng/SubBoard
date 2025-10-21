@@ -28,8 +28,8 @@ def subscription():
     if not user.package_id:
         return Response('No package assigned', status=403)
     
-    # 检查套餐是否过期
-    if not user.package_expire_time or user.package_expire_time <= datetime.now():
+    # 检查套餐是否过期（允许无限期套餐）
+    if user.package_expire_time is not None and user.package_expire_time <= datetime.now():
         return Response('Package expired', status=403)
     
     manager = get_xui_manager()

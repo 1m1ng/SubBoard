@@ -122,7 +122,7 @@ class TrafficScheduler:
             # 查询所有拥有套餐且套餐未过期的用户
             users_with_packages = User.query.filter(
                 User.package_id.isnot(None),
-                User.package_expire_time > datetime.now()
+                ((User.package_expire_time == None) | (User.package_expire_time > datetime.now()))
             ).all()
             
             logger.info(f"找到 {len(users_with_packages)} 个需要计算流量的用户")
@@ -235,7 +235,7 @@ class TrafficScheduler:
                     disable_reason = None
                     
                     # 检查套餐是否过期
-                    if user.package_expire_time and user.package_expire_time <= now:
+                    if user.package_expire_time is not None and user.package_expire_time <= now:
                         should_disable = True
                         disable_reason = 'package_expired'
                         logger.info(f"用户 {user.email} 套餐已过期")

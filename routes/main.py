@@ -49,8 +49,8 @@ def refresh_token():
         flash('您还没有流量套餐，无法使用订阅功能！', 'error')
         return redirect(url_for('main.index'))
     
-    # 检查套餐是否过期
-    if not user.package_expire_time or user.package_expire_time <= datetime.now(): # type: ignore
+    # 检查套餐是否过期（允许无限期套餐）
+    if user.package_expire_time is not None and user.package_expire_time <= datetime.now(): # type: ignore
         flash('您的流量套餐已过期，无法刷新订阅Token！', 'error')
         return redirect(url_for('main.index'))
     
