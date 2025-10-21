@@ -523,12 +523,10 @@ footer p {
 }
 
 .btn-login:hover {
-    transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
 }
 
 .btn-login:active {
-    transform: translateY(0);
     box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
 }
 
@@ -538,12 +536,10 @@ footer p {
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
 }
 
 .btn-primary:active {
-    transform: translateY(0);
     box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
 }
 
@@ -637,7 +633,6 @@ footer p {
 
 .admin-section:hover {
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-    transform: translateY(-2px);
 }
 
 .admin-section:last-child {
@@ -926,7 +921,6 @@ footer p {
 
 .btn-primary:hover {
     background: #5568d3;
-    transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
