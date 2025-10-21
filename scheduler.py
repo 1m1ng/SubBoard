@@ -153,14 +153,15 @@ class TrafficScheduler:
                     total_traffic = 0
                     for traffic in traffic_data:
                         board_name = traffic.get('board_name')
+                        inbound_id = traffic.get('inboundId')
                         node_name = traffic.get('nodeName')
                         upload = traffic.get('up', 0)
                         download = traffic.get('down', 0)
                         
-                        # 查找该节点的流量倍率
+                        # 查找该节点的流量倍率（使用 board_name 和 inbound_id 匹配）
                         package_node = next(
                             (pn for pn in package_nodes 
-                             if pn.board_name == board_name and pn.node_name == node_name),
+                             if pn.board_name == board_name and pn.inbound_id == inbound_id),
                             None
                         )
                         
@@ -169,13 +170,13 @@ class TrafficScheduler:
                             node_traffic = (upload + download) * rate
                             total_traffic += node_traffic
                             logger.debug(
-                                f"用户 {user.email} 节点 {board_name}/{node_name}: "
+                                f"用户 {user.email} 节点 {board_name}/{inbound_id}({node_name}): "
                                 f"上传={upload}, 下载={download}, 倍率={rate}, "
                                 f"计费流量={node_traffic}"
                             )
                         else:
                             logger.debug(
-                                f"用户 {user.email} 在节点 {board_name}/{node_name} "
+                                f"用户 {user.email} 在节点 {board_name}/{inbound_id}({node_name}) "
                                 f"的流量未计入（该节点不在套餐中）"
                             )
                     

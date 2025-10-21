@@ -310,18 +310,26 @@ async function editPackage(packageId, name, totalTraffic, nodes) {
     setTimeout(() => {
         // 设置已选择的节点
         nodes.forEach(node => {
-            const nodeId = `${node.board_name}|${node.inbound_id}|${node.node_name}`;
-            const checkbox = document.querySelector(`#editPackageModal input[name="nodes[]"][value="${nodeId}"]`);
-            if (checkbox) {
-                checkbox.checked = true;
-            }
-            
-            // 设置倍率
-            const rateInputName = `rate_${node.board_name}_${node.node_name}`;
-            const rateInput = document.querySelector(`#editPackageModal input[name="${rateInputName}"]`);
-            if (rateInput) {
-                rateInput.value = node.traffic_rate;
-            }
+            // 遍历所有复选框，通过 board_name 和 inbound_id 来匹配
+            const checkboxes = document.querySelectorAll(`#editPackageModal input[name="nodes[]"]`);
+            checkboxes.forEach(checkbox => {
+                const value = checkbox.value;
+                const parts = value.split('|');
+                if (parts.length === 3) {
+                    const [boardName, inboundId, nodeName] = parts;
+                    // 使用 board_name 和 inbound_id 匹配（这两个是稳定的标识）
+                    if (boardName === node.board_name && parseInt(inboundId) === node.inbound_id) {
+                        checkbox.checked = true;
+                        
+                        // 设置倍率（使用当前checkbox对应的节点名称）
+                        const rateInputName = `rate_${boardName}_${nodeName}`;
+                        const rateInput = document.querySelector(`#editPackageModal input[name="${rateInputName}"]`);
+                        if (rateInput) {
+                            rateInput.value = node.traffic_rate;
+                        }
+                    }
+                }
+            });
         });
     }, 100);
     

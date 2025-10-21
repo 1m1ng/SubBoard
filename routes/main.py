@@ -147,25 +147,31 @@ def get_inbounds():
     user_inbounds = []
     for inbound in cached_data:
         board_name = inbound.get('board_name')
+        inbound_id = inbound.get('id')
         node_name = inbound.get('remark') or inbound.get('tag', '')
         
-        # 检查该节点是否在用户套餐中
+        # 检查该节点是否在用户套餐中（使用 board_name 和 inbound_id 匹配）
         for package_node in package_nodes:
-            if package_node.board_name == board_name and package_node.node_name == node_name:
-                # 创建节点信息副本
-                inbound_copy = inbound.copy()
-                inbound_copy['traffic_rate'] = package_node.traffic_rate
-                
+            if package_node.board_name == board_name and package_node.inbound_id == inbound_id:
                 # 获取用户在此节点的流量使用情况
                 node_key = f"{board_name}|{node_name}"
                 user_traffic = user_traffic_by_node.get(node_key, {'up': 0, 'down': 0, 'total': 0})
                 
-                # 替换为用户流量数据
-                inbound_copy['up'] = user_traffic['up']
-                inbound_copy['down'] = user_traffic['down']
-                inbound_copy['total'] = user_traffic['total']
+                # 只返回前端需要的安全信息，不泄露节点配置
+                safe_inbound = {
+                    'id': inbound_id,
+                    'board_name': board_name,
+                    'remark': node_name,
+                    'protocol': inbound.get('protocol', ''),
+                    'enable': inbound.get('enable', False),
+                    'traffic_rate': package_node.traffic_rate,
+                    # 用户在此节点的流量使用情况
+                    'up': user_traffic['up'],
+                    'down': user_traffic['down'],
+                    'total': user_traffic['total']
+                }
                 
-                user_inbounds.append(inbound_copy)
+                user_inbounds.append(safe_inbound)
                 break
     
     logger.info(f'返回用户套餐节点 - 用户: {user.username}, 节点数: {len(user_inbounds)}')

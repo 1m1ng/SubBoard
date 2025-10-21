@@ -16,15 +16,44 @@ def packages():
     packages_list = Package.query.all()
     servers = ServerConfig.query.all()
     
+    # 获取所有节点信息用于更新节点名称
+    xui_manager = get_xui_manager()
+    inbounds_map = {}  # {(board_name, inbound_id): inbound_data}
+    if xui_manager:
+        all_inbounds = xui_manager.get_all_inbounds()
+        if all_inbounds:
+            for inbound in all_inbounds:
+                board_name = inbound.get('board_name')
+                inbound_id = inbound.get('id')
+                if board_name and inbound_id is not None:
+                    inbounds_map[(board_name, inbound_id)] = inbound
+    
     # 将套餐转换为字典格式，包含节点信息
     packages_data = []
     for pkg in packages_list:
+        # 更新节点名称为当前最新的名称
+        nodes_data = []
+        for node in pkg.nodes:
+            node_dict = node.to_dict()
+            # 尝试从最新的inbounds数据中获取当前名称
+            inbound_key = (node.board_name, node.inbound_id)
+            if inbound_key in inbounds_map:
+                inbound = inbounds_map[inbound_key]
+                # 更新为最新的节点名称
+                current_name = inbound.get('remark') or inbound.get('tag') or f"节点-{node.inbound_id}"
+                node_dict['node_name'] = current_name
+                logger.debug(f"节点 {node.board_name}/{node.inbound_id} 名称: {node.node_name} -> {current_name}")
+            else:
+                # 如果找不到对应的inbound，使用数据库中保存的名称，但标记为可能已失效
+                logger.warning(f"找不到节点 {node.board_name}/{node.inbound_id}，可能已被删除")
+            nodes_data.append(node_dict)
+        
         pkg_dict = {
             'id': pkg.id,
             'name': pkg.name,
             'total_traffic': pkg.total_traffic,
             'created_at': pkg.created_at,
-            'nodes': [node.to_dict() for node in pkg.nodes],
+            'nodes': nodes_data,
             'users_count': len(pkg.users) if pkg.users else 0  # users 已经是列表，不需要 .all()
         }
         packages_data.append(pkg_dict)
@@ -51,11 +80,13 @@ def get_nodes(board_name):
         for inbound in inbounds:
             # 只选择属于指定服务器的节点
             if inbound.get('board_name') == board_name:
-                node_name = inbound.get('remark', inbound.get('tag', ''))
-                if node_name:
+                inbound_id = inbound.get('id')
+                # 优先使用 remark，如果没有则使用 tag，确保有节点名称显示
+                node_name = inbound.get('remark') or inbound.get('tag') or f"节点-{inbound_id}"
+                if inbound_id is not None:
                     nodes.append({
-                        'id': inbound.get('id'),
-                        'name': node_name
+                        'id': inbound_id,  # 这是唯一稳定的标识符
+                        'name': node_name  # 这只是用于显示的名称
                     })
         
         logger.info(f"获取服务器 {board_name} 的节点列表，共 {len(nodes)} 个节点")

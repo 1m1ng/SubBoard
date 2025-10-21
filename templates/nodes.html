@@ -102,8 +102,8 @@ function createNodeCard(inbound) {
         </div>
     `;
     
-    // 节点名称，如果为空显示服务器信息
-    const nodeName = inbound.remark || `${inbound.server}:${inbound.port}`;
+    // 节点名称（后端已保证返回 remark）
+    const nodeName = inbound.remark || '未命名节点';
     
     card.innerHTML = `
         <div class="node-header">
@@ -123,7 +123,7 @@ function createNodeCard(inbound) {
                     <line x1="6" y1="6" x2="6.01" y2="6"></line>
                     <line x1="6" y1="18" x2="6.01" y2="18"></line>
                 </svg>
-                <span>${inbound.board_name || inbound.server}</span>
+                <span>${inbound.board_name || '未知服务器'}</span>
             </div>
             <div class="node-info-item">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
