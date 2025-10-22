@@ -1,0 +1,344 @@
+/* 入站节点信息页面样式 */
+
+/* 渐入动画 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.page-header {
+    margin-bottom: 2rem;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.page-header h1 {
+    color: #ffffff;
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.page-header .subtitle {
+    color: #666;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.inbounds-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* 入站节点卡片 */
+.inbound-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.6s ease-out backwards;
+}
+
+/* 为每个卡片添加延迟动画 */
+.inbound-card:nth-child(1) { animation-delay: 0.1s; }
+.inbound-card:nth-child(2) { animation-delay: 0.2s; }
+.inbound-card:nth-child(3) { animation-delay: 0.3s; }
+.inbound-card:nth-child(4) { animation-delay: 0.4s; }
+.inbound-card:nth-child(5) { animation-delay: 0.5s; }
+.inbound-card:nth-child(n+6) { animation-delay: 0.6s; }
+
+.inbound-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+/* 入站节点头部 */
+.inbound-header {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.inbound-info {
+    flex: 1;
+    min-width: 250px;
+}
+
+.inbound-name {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: #fff;
+}
+
+.inbound-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.inbound-badge {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.protocol-badge {
+    background: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+/* 统计信息 */
+.inbound-stats {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.stat-item {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+/* 客户端部分 */
+.clients-section {
+    padding: 1.5rem;
+}
+
+.section-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+/* 客户端表格 */
+.clients-table-wrapper {
+    overflow-x: auto;
+}
+
+.clients-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.clients-table thead {
+    background: #f8f9fa;
+}
+
+.clients-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #555;
+    border-bottom: 2px solid #e0e0e0;
+    white-space: nowrap;
+}
+
+.clients-table tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s ease;
+}
+
+.clients-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.clients-table tbody tr.disabled-client {
+    opacity: 0.6;
+}
+
+.clients-table td {
+    padding: 1rem;
+    color: #333;
+}
+
+.client-email {
+    font-weight: 500;
+    color: #667eea;
+}
+
+.traffic-data {
+    font-family: 'Courier New', monospace;
+    color: #666;
+}
+
+.traffic-data.total {
+    font-weight: 600;
+    color: #333;
+}
+
+/* 状态徽章 */
+.status-badge {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+.status-badge.enabled {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.disabled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* 无客户端状态 */
+.no-clients {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: #999;
+}
+
+.no-clients .empty-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    stroke: #ddd;
+}
+
+.no-clients p {
+    margin: 0;
+    font-size: 1rem;
+    color: #999;
+}
+
+/* 空状态 */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.empty-state .empty-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    stroke: #ddd;
+    animation: fadeInUp 0.6s ease-out 0.1s backwards;
+}
+
+.empty-state h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 0.5rem 0;
+    animation: fadeInUp 0.6s ease-out 0.2s backwards;
+}
+
+.empty-state p {
+    font-size: 1rem;
+    color: #666;
+    margin: 0;
+    animation: fadeInUp 0.6s ease-out 0.3s backwards;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .inbound-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .inbound-name {
+        font-size: 1.25rem;
+    }
+
+    .inbound-stats {
+        width: 100%;
+    }
+
+    .stat-item {
+        flex: 1;
+        padding: 0.75rem 1rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .clients-table {
+        font-size: 0.85rem;
+    }
+
+    .clients-table th,
+    .clients-table td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .client-email {
+        font-size: 0.85rem;
+    }
+
+    /* 在小屏幕上隐藏上传流量列 */
+    .clients-table th:nth-child(2),
+    .clients-table td:nth-child(2) {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .inbound-meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .inbound-badge {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    /* 在超小屏幕上也隐藏下载流量列，只保留总流量 */
+    .clients-table th:nth-child(3),
+    .clients-table td:nth-child(3) {
+        display: none;
+    }
+}

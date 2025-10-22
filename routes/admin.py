@@ -271,3 +271,57 @@ def unblock_ip(ip_id):
         flash('IP记录不存在！', 'error')
     
     return redirect(url_for('admin.admin'))
+
+
+@admin_bp.route('/inbounds')
+@admin_required
+def inbounds():
+    """管理员：入站节点信息"""
+    xui_manager = get_xui_manager()
+    if not xui_manager:
+        flash('XUI管理器未初始化！', 'error')
+        return redirect(url_for('admin.admin'))
+    
+    # 获取所有入站节点信息
+    all_inbounds = xui_manager.get_all_inbounds()
+    
+    # 组织数据：按面板分组，并为每个入站节点添加客户端信息
+    inbounds_data = []
+    for inbound in all_inbounds:
+        # 获取节点详细信息（包含客户端统计）
+        board_name = inbound.get('board_name')
+        inbound_id = inbound.get('id')
+        
+        # 获取客户端统计信息
+        client_stats = inbound.get('clientStats', [])
+        
+        # 整理客户端数据
+        clients_data = []
+        if client_stats:
+            for client in client_stats:
+                email = client.get('email', '')
+                up = client.get('up', 0)
+                down = client.get('down', 0)
+                total_traffic = up + down
+                enable = client.get('enable', False)
+                
+                clients_data.append({
+                    'email': email,
+                    'up': up,
+                    'down': down,
+                    'total': total_traffic,
+                    'enable': enable
+                })
+        
+        inbounds_data.append({
+            'board_name': board_name,
+            'server': inbound.get('server'),
+            'inbound_id': inbound_id,
+            'remark': inbound.get('remark', ''),
+            'protocol': inbound.get('protocol', ''),
+            'port': inbound.get('port', ''),
+            'clients': clients_data,
+            'client_count': len(clients_data)
+        })
+    
+    return render_template('inbounds.html', inbounds=inbounds_data)

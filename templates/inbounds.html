@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}入站节点信息 - SubBoard{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='inbounds.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>入站节点信息</h1>
+</div>
+
+<div class="inbounds-container">
+    {% if inbounds %}
+        {% for inbound in inbounds %}
+        <div class="inbound-card">
+            <div class="inbound-header">
+                <div class="inbound-info">
+                    <h2 class="inbound-name">{{ inbound.remark or '未命名节点' }}</h2>
+                    <div class="inbound-meta">
+                        <span class="inbound-badge protocol-badge">{{ inbound.protocol }}</span>
+                        <span class="inbound-badge">端口: {{ inbound.port }}</span>
+                        <span class="inbound-badge">面板: {{ inbound.board_name }}</span>
+                        <span class="inbound-badge">服务器: {{ inbound.server }}</span>
+                    </div>
+                </div>
+                <div class="inbound-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ inbound.client_count }}</div>
+                        <div class="stat-label">客户端数量</div>
+                    </div>
+                </div>
+            </div>
+
+            {% if inbound.clients %}
+            <div class="clients-section">
+                <h3 class="section-title">客户端列表</h3>
+                <div class="clients-table-wrapper">
+                    <table class="clients-table">
+                        <thead>
+                            <tr>
+                                <th>邮箱</th>
+                                <th>上传流量</th>
+                                <th>下载流量</th>
+                                <th>总流量</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for client in inbound.clients %}
+                            <tr class="{% if not client.enable %}disabled-client{% endif %}">
+                                <td class="client-email">{{ client.email }}</td>
+                                <td class="traffic-data">{{ (client.up / 1024 / 1024 / 1024) | round(2) }} GB</td>
+                                <td class="traffic-data">{{ (client.down / 1024 / 1024 / 1024) | round(2) }} GB</td>
+                                <td class="traffic-data total">{{ (client.total / 1024 / 1024 / 1024) | round(2) }} GB</td>
+                                <td>
+                                    {% if client.enable %}
+                                        <span class="status-badge enabled">已启用</span>
+                                    {% else %}
+                                        <span class="status-badge disabled">已禁用</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="no-clients">
+                <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <p>该节点暂无客户端</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+        </svg>
+        <h2>暂无入站节点</h2>
+        <p>系统中还没有配置任何入站节点</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // 自动刷新功能（可选）
+    let autoRefreshInterval = null;
+    
+    function startAutoRefresh() {
+        autoRefreshInterval = setInterval(() => {
+            location.reload();
+        }, 60000); // 每60秒刷新一次
+    }
+    
+    // 页面加载完成后启动自动刷新
+    // startAutoRefresh();
+    
+    // 页面卸载时清除定时器
+    window.addEventListener('beforeunload', () => {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+    });
+</script>
+{% endblock %}
