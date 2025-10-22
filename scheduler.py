@@ -75,7 +75,7 @@ class TrafficScheduler:
         """定时刷新所有面板的入站列表缓存"""
         with self.app.app_context():
             try:
-                logger.info("开始刷新入站列表缓存...")
+                logger.debug("开始刷新入站列表缓存...")
                 
                 xui_manager = get_xui_manager()
                 if not xui_manager:
@@ -89,7 +89,7 @@ class TrafficScheduler:
                     from utils.cache import inbounds_cache
                     # 保存聚合后的数据到缓存
                     inbounds_cache.set_aggregated(all_inbounds)
-                    logger.info(f"已刷新入站列表缓存，共 {len(all_inbounds)} 个节点")
+                    logger.debug(f"已刷新入站列表缓存，共 {len(all_inbounds)} 个节点")
                 else:
                     logger.warning("未获取到任何入站列表")
                 
@@ -100,7 +100,7 @@ class TrafficScheduler:
         """执行流量监控任务（在应用上下文中运行）"""
         with self.app.app_context():
             try:
-                logger.info("开始执行流量监控任务...")
+                logger.debug("开始执行流量监控任务...")
                 
                 # 任务1: 计算所有用户的已使用流量
                 self._calculate_user_traffic()
@@ -111,7 +111,7 @@ class TrafficScheduler:
                 # 任务3: 检测用户是否需要重置流量
                 self._check_traffic_reset()
                 
-                logger.info("流量监控任务执行完成")
+                logger.debug("流量监控任务执行完成")
                 
             except Exception as e:
                 logger.error(f"执行流量监控任务时发生错误: {str(e)}", exc_info=True)
@@ -125,7 +125,7 @@ class TrafficScheduler:
                 ((User.package_expire_time == None) | (User.package_expire_time > datetime.now()))
             ).all()
             
-            logger.info(f"找到 {len(users_with_packages)} 个需要计算流量的用户")
+            logger.debug(f"找到 {len(users_with_packages)} 个需要计算流量的用户")
             
             xui_manager = get_xui_manager()
             
@@ -198,7 +198,7 @@ class TrafficScheduler:
                     # 转换套餐总流量为 GB（数据库存储的是字节）
                     total_traffic_limit_gb = package.total_traffic / (1024 ** 3)
                     
-                    logger.info(
+                    logger.debug(
                         f"用户 {user.email} 已使用流量: {total_traffic_gb:.2f} GB / "
                         f"{total_traffic_limit_gb:.2f} GB"
                     )
@@ -207,7 +207,7 @@ class TrafficScheduler:
                     logger.error(f"计算用户 {user.email} 流量时出错: {str(e)}", exc_info=True)
             
             db.session.commit()
-            logger.info("流量计算任务完成")
+            logger.debug("流量计算任务完成")
             
         except Exception as e:
             db.session.rollback()
@@ -221,7 +221,7 @@ class TrafficScheduler:
                 User.package_id.isnot(None)
             ).all()
             
-            logger.info(f"检查 {len(users_with_packages)} 个用户的流量和过期状态")
+            logger.debug(f"检查 {len(users_with_packages)} 个用户的流量和过期状态")
             
             xui_manager = get_xui_manager()
             now = datetime.now()
@@ -287,7 +287,7 @@ class TrafficScheduler:
                     logger.error(f"检查用户 {user.email} 状态时出错: {str(e)}", exc_info=True)
             
             db.session.commit()
-            logger.info("流量和过期检查任务完成")
+            logger.debug("流量和过期检查任务完成")
             
         except Exception as e:
             db.session.rollback()
@@ -368,7 +368,7 @@ class TrafficScheduler:
                     logger.error(f"重置用户 {user.email} 流量时出错: {str(e)}", exc_info=True)
             
             db.session.commit()
-            logger.info("流量重置任务完成")
+            logger.debug("流量重置任务完成")
             
         except Exception as e:
             db.session.rollback()
@@ -452,10 +452,10 @@ class TrafficScheduler:
         """定期清理过期的JWT token"""
         with self.app.app_context():
             try:
-                logger.info("开始清理过期的JWT令牌...")
+                logger.debug("开始清理过期的JWT令牌...")
                 from utils import cleanup_expired_tokens
                 cleanup_expired_tokens()
-                logger.info("过期JWT令牌清理完成")
+                logger.debug("过期JWT令牌清理完成")
             except Exception as e:
                 logger.error(f"清理过期JWT令牌时发生错误: {str(e)}", exc_info=True)
 
