@@ -225,11 +225,11 @@ class XUIClient:
         
         return None
     
-    def update_client(self, client_uuid: str, inbound_id: int, client_data: Dict) -> bool:
+    def update_client(self, email: str, inbound_id: int, client_data: Dict) -> bool:
         """
         更新客户端配置
         参数:
-            client_uuid: 客户端UUID
+            email: 客户端邮箱
             inbound_id: 入站节点ID
             client_data: 客户端完整数据
         返回:
@@ -239,7 +239,7 @@ class XUIClient:
             if not self.login():
                 return False
         
-        update_url = f"{self.base_url}/panel/api/inbounds/updateClient/{client_uuid}"
+        update_url = f"{self.base_url}/panel/api/inbounds/updateClient/{email}"
         
         # 准备请求数据：inbound_id 和客户端配置的 JSON 字符串
         payload = {
@@ -271,7 +271,7 @@ class XUIClient:
                     return False
                 
                 if data.get('success'):
-                    logger.info(f"成功更新客户端 {client_uuid} 在节点 {inbound_id}")
+                    logger.info(f"成功更新客户端 {email} 在节点 {inbound_id}")
                     return True
                 else:
                     logger.warning(f"更新客户端失败: {data.get('msg')}")
@@ -631,24 +631,7 @@ class XUIClient:
             if not self.login():
                 return False
         
-        # 先获取客户端UUID
-        inbound_info = self.get_inbound_info(inbound_id)
-        if not inbound_info:
-            logger.error(f"无法获取节点信息，inbound_id: {inbound_id}")
-            return False
-        
-        client_stats = inbound_info.get('clientStats', [])
-        client_uuid = None
-        for client_stat in client_stats:
-            if client_stat.get('email') == email:
-                client_uuid = client_stat.get('uuid')
-                break
-        
-        if not client_uuid:
-            logger.warning(f"未找到客户端 {email} 在节点 {inbound_id} 中")
-            return False
-        
-        delete_url = f"{self.base_url}/panel/api/inbounds/{inbound_id}/delClient/{client_uuid}"
+        delete_url = f"{self.base_url}/panel/api/inbounds/{inbound_id}/delClient/{email}"
         
         for attempt in range(2):
             try:
@@ -916,12 +899,12 @@ class XUIManager:
         
         return all_clients
     
-    def update_client(self, board_name: str, client_uuid: str, inbound_id: int, client_data: Dict) -> bool:
+    def update_client(self, board_name: str, email: str, inbound_id: int, client_data: Dict) -> bool:
         """
         更新客户端配置（在指定面板中）
         参数:
             board_name: 面板名称
-            client_uuid: 客户端UUID
+            email: 客户端邮箱
             inbound_id: 入站节点ID
             client_data: 客户端完整数据
         返回:
@@ -932,7 +915,7 @@ class XUIManager:
             logger.error(f"未找到面板: {board_name}")
             return False
         
-        return client.update_client(client_uuid, inbound_id, client_data)
+        return client.update_client(email, inbound_id, client_data)
     
     def reset_client_traffic(self, board_name: str, inbound_id: int, email: str) -> bool:
         """
