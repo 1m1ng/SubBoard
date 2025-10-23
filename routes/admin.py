@@ -301,6 +301,10 @@ def inbounds():
         if client_stats:
             for client in client_stats:
                 email = client.get('email', '')
+                
+                if email == 'default':
+                    continue  # 跳过默认客户端
+                
                 up = client.get('up', 0)
                 down = client.get('down', 0)
                 total_traffic = up + down
