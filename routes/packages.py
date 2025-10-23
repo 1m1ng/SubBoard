@@ -1,10 +1,9 @@
 """套餐管理路由"""
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from extensions import db, logger
+from utils.extensions import db, logger
 from models import Package, PackageNode, ServerConfig
 from utils.decorators import admin_required
-from utils.xui import get_xui_manager
-from utils.cache import inbounds_cache
+from service.xui_manager import get_xui_manager
 
 packages_bp = Blueprint('packages', __name__, url_prefix='/packages')
 
@@ -13,27 +12,28 @@ packages_bp = Blueprint('packages', __name__, url_prefix='/packages')
 @admin_required
 def packages():
     """套餐管理页面"""
-    packages_list = Package.query.all()
-    servers = ServerConfig.query.all()
-    
+    packages_list: list[Package] = Package.query.all()
+    servers: list[ServerConfig] = ServerConfig.query.all()
+
     # 获取所有节点信息用于更新节点名称
     xui_manager = get_xui_manager()
     inbounds_map = {}  # {(board_name, inbound_id): inbound_data}
     if xui_manager:
         all_inbounds = xui_manager.get_all_inbounds()
         if all_inbounds:
-            for inbound in all_inbounds:
-                board_name = inbound.get('board_name')
-                inbound_id = inbound.get('id')
+            for inbound in all_inbounds:  # 修复：假设 all_inbounds 是一个列表
+                board_name = inbound.get('board_name')  # type: ignore
+                inbound_id = inbound.get('id')  # type: ignore
                 if board_name and inbound_id is not None:
                     inbounds_map[(board_name, inbound_id)] = inbound
-    
+
     # 将套餐转换为字典格式，包含节点信息
     packages_data = []
     for pkg in packages_list:
         # 更新节点名称为当前最新的名称
         nodes_data = []
-        for node in pkg.nodes:
+        nodes: list[PackageNode] = pkg.nodes  # type: ignore
+        for node in nodes:
             node_dict = node.to_dict()
             # 尝试从最新的inbounds数据中获取当前名称
             inbound_key = (node.board_name, node.inbound_id)
@@ -47,17 +47,17 @@ def packages():
                 # 如果找不到对应的inbound，使用数据库中保存的名称，但标记为可能已失效
                 logger.warning(f"找不到节点 {node.board_name}/{node.inbound_id}，可能已被删除")
             nodes_data.append(node_dict)
-        
+
         pkg_dict = {
             'id': pkg.id,
             'name': pkg.name,
             'total_traffic': pkg.total_traffic,
             'created_at': pkg.created_at,
             'nodes': nodes_data,
-            'users_count': len(pkg.users) if pkg.users else 0  # users 已经是列表，不需要 .all()
+            'users_count': len(pkg.users) if pkg.users else 0  # type: ignore
         }
         packages_data.append(pkg_dict)
-    
+
     return render_template('packages.html', packages=packages_data, servers=servers)
 
 
@@ -79,10 +79,10 @@ def get_nodes(board_name):
         nodes = []
         for inbound in inbounds:
             # 只选择属于指定服务器的节点
-            if inbound.get('board_name') == board_name:
-                inbound_id = inbound.get('id')
+            if inbound.get('board_name') == board_name: # type: ignore
+                inbound_id = inbound.get('id') # type: ignore
                 # 优先使用 remark，如果没有则使用 tag，确保有节点名称显示
-                node_name = inbound.get('remark') or inbound.get('tag') or f"节点-{inbound_id}"
+                node_name = inbound.get('remark') or inbound.get('tag') or f"节点-{inbound_id}" # type: ignore
                 if inbound_id is not None:
                     nodes.append({
                         'id': inbound_id,  # 这是唯一稳定的标识符
@@ -99,34 +99,14 @@ def get_nodes(board_name):
 @packages_bp.route('/refresh_nodes', methods=['POST'])
 @admin_required
 def refresh_nodes():
-    """刷新所有服务器的节点列表（清除缓存并重新获取）"""
-    try:
-        # 清除缓存
-        inbounds_cache.clear()
-        logger.info('已清除入站列表缓存')
-        
-        # 重新获取节点信息
-        xui_manager = get_xui_manager()
-        if not xui_manager:
-            return jsonify({'success': False, 'message': 'XUI管理器未初始化'})
-        
-        # 强制重新从服务器获取数据
-        all_inbounds = xui_manager.get_all_inbounds()
-        if all_inbounds is None:
-            return jsonify({'success': False, 'message': '无法获取节点列表'})
-        
-        # 更新缓存
-        inbounds_cache.set_aggregated(all_inbounds)
-        logger.info(f'已刷新入站列表缓存，共 {len(all_inbounds)} 个节点')
-        
-        return jsonify({
-            'success': True, 
-            'message': f'刷新成功，共获取 {len(all_inbounds)} 个节点',
-            'total_nodes': len(all_inbounds)
-        })
-    except Exception as e:
-        logger.error(f"刷新节点列表失败: {str(e)}")
-        return jsonify({'success': False, 'message': f'刷新失败: {str(e)}'})
+    """刷新所有服务器的节点列表"""
+    xui_manager = get_xui_manager()
+    if not xui_manager:
+        return jsonify({'success': False, 'message': 'XUI管理器未初始化'})
+    
+    xui_manager.clear_cache_all_servers()
+    
+    return jsonify({'success': True, 'message': '已刷新所有服务器的节点列表缓存'})
 
 
 @packages_bp.route('/create', methods=['POST'])
@@ -194,15 +174,6 @@ def create_package():
             db.session.add(package_node)
         
         db.session.commit()
-        
-        # 刷新入站列表缓存
-        logger.info(f'套餐创建后刷新缓存')
-        xui_manager = get_xui_manager()
-        if xui_manager:
-            all_inbounds = xui_manager.get_all_inbounds()
-            if all_inbounds:
-                inbounds_cache.set_aggregated(all_inbounds)
-                logger.info(f'已刷新入站列表缓存，共 {len(all_inbounds)} 个节点')
         
         logger.info(f'管理员创建了套餐: {name}')
         flash(f'套餐 {name} 创建成功！', 'success')
@@ -338,15 +309,6 @@ def edit_package(package_id):
         
         db.session.commit()
         
-        # 刷新入站列表缓存
-        logger.info(f'套餐编辑后刷新缓存')
-        xui_manager = get_xui_manager()
-        if xui_manager:
-            all_inbounds = xui_manager.get_all_inbounds()
-            if all_inbounds:
-                inbounds_cache.set_aggregated(all_inbounds)
-                logger.info(f'已刷新入站列表缓存，共 {len(all_inbounds)} 个节点')
-        
         logger.info(f'管理员编辑了套餐: {name}，节点变化：删除 {len(removed_nodes)} 个，新增 {len(added_nodes)} 个')
         flash(f'套餐 {name} 已更新！', 'success')
     except Exception as e:
@@ -407,15 +369,6 @@ def delete_package(package_id):
         # 删除套餐（级联删除会自动删除 PackageNode）
         db.session.delete(package)
         db.session.commit()
-        
-        # 刷新入站列表缓存
-        logger.info(f'套餐删除后刷新缓存')
-        xui_manager = get_xui_manager()
-        if xui_manager:
-            all_inbounds = xui_manager.get_all_inbounds()
-            if all_inbounds:
-                inbounds_cache.set_aggregated(all_inbounds)
-                logger.info(f'已刷新入站列表缓存，共 {len(all_inbounds)} 个节点')
         
         logger.info(f'管理员删除了套餐: {name}，包含 {len(package_nodes)} 个节点')
         flash(f'套餐 {name} 已被删除！', 'success')

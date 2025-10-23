@@ -1,6 +1,6 @@
 """服务器配置模型"""
 from datetime import datetime
-from extensions import db
+from utils.extensions import db
 
 
 class ServerConfig(db.Model):

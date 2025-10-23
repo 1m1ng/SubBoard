@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
-from extensions import db
+from utils.extensions import db
 
 
 class User(db.Model):
@@ -20,7 +20,6 @@ class User(db.Model):
     package_id = db.Column(db.Integer, db.ForeignKey('package.id'), nullable=True)
     package_expire_time = db.Column(db.DateTime, nullable=True)  # 套餐到期时间
     next_reset_time = db.Column(db.DateTime, nullable=True)  # 下一次流量重置时间
-    used_traffic = db.Column(db.BigInteger, default=0)  # 已使用流量（字节）
 
     def set_password(self, password):
         """设置密码"""

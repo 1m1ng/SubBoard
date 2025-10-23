@@ -5,11 +5,9 @@
 import re
 import base64
 import json
-from urllib.parse import urlparse, parse_qs, unquote
+from urllib.parse import parse_qs, unquote
 from typing import List, Dict, Optional
-import logging
-
-logger = logging.getLogger(__name__)
+from utils.extensions import logger
 
 
 def parse_vless_url(url: str) -> Optional[Dict]:
@@ -215,47 +213,28 @@ def parse_trojan_url(url: str) -> Optional[Dict]:
         return None
 
 
-def parse_subscription_urls(content: str) -> List[Dict]:
+def parse_subscription_urls(subs_content: List[str]) -> List[Dict]:
     """解析订阅内容中的所有代理"""
     proxies = []
     
-    # 解码 base64（如果需要）
-    try:
-        decoded = base64.b64decode(content).decode('utf-8')
-        logger.info(f"成功解码订阅内容，长度: {len(decoded)} 字符")
-    except Exception as e:
-        logger.warning(f"Base64 解码失败，尝试直接使用原始内容: {str(e)}")
-        decoded = content
-    
-    # 按行分割
-    lines = decoded.strip().split('\n')
-    logger.info(f"订阅内容共 {len(lines)} 行")
-    
-    for idx, line in enumerate(lines, 1):
-        line = line.strip()
-        if not line:
-            continue
-        
+    for sub_content in subs_content:
         proxy = None
         try:
-            if line.startswith('vless://'):
-                proxy = parse_vless_url(line)
-            elif line.startswith('ss://'):
-                proxy = parse_ss_url(line)
-            elif line.startswith('vmess://'):
-                proxy = parse_vmess_url(line)
-            elif line.startswith('trojan://'):
-                proxy = parse_trojan_url(line)
+            if sub_content.startswith('vless://'):
+                proxy = parse_vless_url(sub_content)
+            elif sub_content.startswith('ss://'):
+                proxy = parse_ss_url(sub_content)
+            elif sub_content.startswith('vmess://'):
+                proxy = parse_vmess_url(sub_content)
+            elif sub_content.startswith('trojan://'):
+                proxy = parse_trojan_url(sub_content)
             else:
-                logger.warning(f"第 {idx} 行: 未知的代理协议: {line[:20]}...")
+                logger.warning(f"未知的代理协议: {sub_content[:20]}...")
         except Exception as e:
-            logger.error(f"第 {idx} 行: 解析代理失败: {str(e)}")
+            logger.error(f"解析订阅链接失败: {str(e)}")
         
         if proxy:
             proxies.append(proxy)
-            logger.debug(f"第 {idx} 行: 成功解析 {proxy.get('type')} 代理: {proxy.get('name')}")
-    
-    logger.info(f"成功解析 {len(proxies)} 个代理配置")
     return proxies
 
 
@@ -291,13 +270,13 @@ def generate_mihomo_config(proxies: List[Dict], template: str) -> str:
         raise
 
 
-def convert_to_mihomo_yaml(base64_content: str, template: str) -> str:
+def convert_to_mihomo_yaml(subs_content: List[str], template: str) -> str:
     """将 base64 订阅内容转换为 Mihomo YAML 格式"""
     try:
         logger.info("开始转换订阅内容为 Mihomo YAML 格式")
         
         # 解析代理列表
-        proxies = parse_subscription_urls(base64_content)
+        proxies = parse_subscription_urls(subs_content)
         
         if not proxies:
             logger.error("没有找到有效的代理配置")

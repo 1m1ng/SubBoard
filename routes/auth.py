@@ -1,7 +1,7 @@
 """认证相关路由"""
 from flask import Blueprint, render_template, request, redirect, url_for, flash, make_response
 from datetime import datetime, timezone
-from extensions import db, logger
+from utils.extensions import db, logger
 from models import User
 from utils import (
     check_ip_blocked, record_failed_login, reset_failed_login, 

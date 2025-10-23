@@ -3,7 +3,7 @@ import os
 import atexit
 from flask import Flask
 from waitress import serve
-from extensions import db, logger
+from utils.extensions import db, logger
 from config import config
 from models import User
 from utils import generate_random_password, register_template_filters

@@ -1,7 +1,7 @@
 """Mihomo模板管理路由"""
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from datetime import datetime
-from extensions import db, logger
+from utils.extensions import db, logger
 from models import MihomoTemplate
 from utils.decorators import admin_required
 import yaml

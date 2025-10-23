@@ -1,11 +1,10 @@
 """管理员路由"""
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
-from extensions import db, logger
-from models import User, IPBlock, Package
+from utils.extensions import db, logger
+from models import User, IPBlock, Package, PackageNode
 from utils.decorators import admin_required
 from datetime import datetime, timedelta
-from utils.xui import get_xui_manager
-from utils.cache import inbounds_cache
+from service.xui_manager import get_xui_manager
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -93,7 +92,7 @@ def create_user():
     # 如果分配了套餐，添加用户到套餐节点
     if package_id:
         xui_manager = get_xui_manager()
-        if xui_manager and not xui_manager.add_client_to_package_nodes(email, int(package_id)):
+        if xui_manager and not xui_manager.add_client_to_package_nodes(user):
             logger.warning(f'添加用户 {username} 到套餐节点时部分失败')
             flash(f'用户 {username} 创建成功，但添加到部分节点失败！', 'warning')
         elif xui_manager:
@@ -193,11 +192,8 @@ def edit_user(user_id):
     
     db.session.commit()
     
-    # 处理套餐变动
-    new_package_id = user.package_id
-    
     # 检查套餐是否发生变化
-    if old_package_id != new_package_id:
+    if old_package_id != user.package_id:
         xui_manager = get_xui_manager()
         if not xui_manager:
             logger.warning(f'XUI管理器未初始化，无法处理套餐节点变更')
@@ -210,22 +206,15 @@ def edit_user(user_id):
                     logger.warning(f'从旧套餐节点删除用户 {username} 时部分失败')
             
             # 再添加到新套餐节点
-            if new_package_id:
-                logger.info(f'用户 {username} 套餐变更，添加到新套餐 {new_package_id} 节点')
-                if not xui_manager.add_client_to_package_nodes(email, new_package_id):
+            if user.package_id:
+                logger.info(f'用户 {username} 套餐变更，添加到新套餐 {user.package_id} 节点')
+                if not xui_manager.add_client_to_package_nodes(user):
                     logger.warning(f'添加用户 {username} 到新套餐节点时部分失败')
                     flash(f'用户 {username} 信息已更新，但添加到部分节点失败！', 'warning')
                 else:
                     flash(f'用户 {username} 信息已更新！', 'success')
             else:
                 flash(f'用户 {username} 信息已更新！', 'success')
-            
-            # 刷新入站列表缓存（套餐发生变化时）
-            logger.info(f'用户套餐编辑后刷新缓存')
-            all_inbounds = xui_manager.get_all_inbounds()
-            if all_inbounds:
-                inbounds_cache.set_aggregated(all_inbounds)
-                logger.info(f'已刷新入站列表缓存，共 {len(all_inbounds)} 个节点')
     else:
         flash(f'用户 {username} 信息已更新！', 'success')
     
@@ -281,20 +270,32 @@ def inbounds():
     if not xui_manager:
         flash('XUI管理器未初始化！', 'error')
         return redirect(url_for('admin.admin'))
-    
-    # 获取所有入站节点信息
-    all_inbounds = xui_manager.get_all_inbounds()
-    
+
+    # 从数据库中获取所有套餐的节点信息
+    packages: list[Package] = Package.query.all()
+    all_nodes: dict[tuple[str, int], PackageNode] = {}
+    for package in packages:
+        nodes: list[PackageNode] = package.nodes  # type: ignore
+        for node in nodes:
+            node_key = (node.board_name, node.inbound_id)
+            if node_key not in all_nodes:
+                all_nodes[node_key] = node
+
     # 组织数据：按面板分组，并为每个入站节点添加客户端信息
     inbounds_data = []
-    for inbound in all_inbounds:
+    for node_key, node in all_nodes.items():
+        server = xui_manager.servers.get(node.board_name)
+        if not server:
+            continue
+        inbound = server.get_inbound(node.inbound_id)
+        if not inbound:
+            continue
         # 获取节点详细信息（包含客户端统计）
-        board_name = inbound.get('board_name')
         inbound_id = inbound.get('id')
-        
+
         # 获取客户端统计信息
         client_stats = inbound.get('clientStats', [])
-        
+
         # 整理客户端数据
         clients_data = []
         if client_stats:
@@ -304,7 +305,7 @@ def inbounds():
                 down = client.get('down', 0)
                 total_traffic = up + down
                 enable = client.get('enable', False)
-                
+
                 clients_data.append({
                     'email': email,
                     'up': up,
@@ -312,10 +313,10 @@ def inbounds():
                     'total': total_traffic,
                     'enable': enable
                 })
-        
+
         inbounds_data.append({
-            'board_name': board_name,
-            'server': inbound.get('server'),
+            'board_name': node.board_name,
+            'server': server.server,
             'inbound_id': inbound_id,
             'remark': inbound.get('remark', ''),
             'protocol': inbound.get('protocol', ''),
@@ -323,5 +324,5 @@ def inbounds():
             'clients': clients_data,
             'client_count': len(clients_data)
         })
-    
+
     return render_template('inbounds.html', inbounds=inbounds_data)

@@ -3,7 +3,7 @@ import secrets
 import string
 import jwt
 from datetime import datetime, timedelta, timezone
-from extensions import db, logger
+from utils.extensions import db, logger
 from models import IPBlock, User, JWTToken
 from config import Config
 

@@ -1,6 +1,6 @@
 """JWT令牌模型"""
 from datetime import datetime, timezone
-from extensions import db
+from utils.extensions import db
 
 
 class JWTToken(db.Model):
