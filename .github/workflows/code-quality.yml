@@ -43,9 +43,7 @@ jobs:
       
       - name: Check Python syntax
         run: |
-          python -m py_compile app.py
-          python -m py_compile xui_client.py
-          python -m py_compile subscription_converter.py
+          find . -name "*.py" -exec python -m py_compile {} +
       
       - name: Display Python version
         run: |
