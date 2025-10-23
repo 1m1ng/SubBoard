@@ -7,7 +7,6 @@ _xui_manager: Optional[XUIManager] = None
 
 
 def _init_xui_manager() -> Optional[XUIManager]:
-    global _xui_manager
     try:
         servers = ServerConfig.query.all()
         
@@ -33,6 +32,5 @@ def get_xui_manager() -> Optional[XUIManager]:
 
 
 def reload_xui_manager() -> Optional[XUIManager]:
-    global _xui_manager
     return _init_xui_manager()
 
