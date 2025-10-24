@@ -103,7 +103,8 @@ def subscription():
             f"expire={expire_timestamp}"
         )
         
-        aggregated = '\n'.join(subs_content)
+        # 确保 subs_content 中的每个元素都是字符串
+        aggregated = '\n'.join(str(item) for item in subs_content)
         base64_content = base64.b64encode(aggregated.encode('utf-8')).decode('utf-8')
         
         response = Response(base64_content, mimetype='text/plain')

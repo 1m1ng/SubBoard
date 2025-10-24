@@ -51,15 +51,17 @@
                             </svg>
                             流量使用
                         </div>
+                        <!-- 修复 used_traffic 为 None 时的错误 -->
+                        {% set used_traffic = used_traffic or 0 %}
                         <div class="traffic-info">
                             <div class="traffic-text">
-                                <span class="used">{{ "%.2f"|format((used_traffic / (1024 ** 3)) or 0) }} GB</span>
+                                <span class="used">{{ "%.2f"|format((used_traffic / (1024 ** 3))) }} GB</span>
                                 <span class="separator">/</span>
                                 {% set total_gb = package.total_traffic / (1024 ** 3) %}
                                 <span class="total">{{ "%.2f"|format(total_gb) }} GB</span>
                             </div>
                             <div class="progress-bar">
-                                {% set used = (used_traffic / (1024 ** 3)) or 0 %}
+                                {% set used = (used_traffic / (1024 ** 3)) %}
                                 {% set total = total_gb %}
                                 {% set percentage = (used / total * 100) if total > 0 else 0 %}
                                 {% if percentage >= 90 %}
