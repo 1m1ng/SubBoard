@@ -33,7 +33,7 @@ class XUIManager:
                     if client:
                         sub_content = server.get_subscription(node.inbound_id, user.email)
                         if sub_content:
-                            subscriptions.append((sub_content, node.traffic_rate))
+                            subscriptions.append(sub_content)
             return subscriptions
         
         return None

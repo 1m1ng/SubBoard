@@ -275,16 +275,8 @@ def convert_to_mihomo_yaml(subs_content: List[str], template: str) -> str:
     try:
         logger.debug("开始转换订阅内容为 Mihomo YAML 格式")
 
-        # 确保 subs_content 中的所有元素都是字符串或从元组中提取字符串部分
-        valid_subs_content = []
-        for content in subs_content:
-            if isinstance(content, tuple):
-                logger.debug(f"从元组中提取代理链接: {content}")
-                content = content[0]  # 提取元组中的第一个元素作为代理链接
-            valid_subs_content.append(str(content))
-
         # 解析代理列表
-        proxies = parse_subscription_urls(valid_subs_content)
+        proxies = parse_subscription_urls(subs_content)
 
         if not proxies:
             logger.error("没有找到有效的代理配置")
