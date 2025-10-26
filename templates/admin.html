@@ -3,7 +3,7 @@
 {% block title %}用户管理 - SubBoard{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -219,29 +219,8 @@
     </div>
 </div>
 
-<script>
-function editUser(userId, username, email, isAdmin, packageId, packageExpireTime, nextResetTime) {
-    document.getElementById('edit_username').value = username;
-    document.getElementById('edit_email').value = email;
-    document.getElementById('edit_password').value = '';
-    document.getElementById('edit_is_admin').checked = isAdmin;
-    document.getElementById('edit_package_id').value = packageId || '';
-    document.getElementById('edit_package_expire_time').value = packageExpireTime || '';
-    document.getElementById('edit_next_reset_time').value = nextResetTime || '';
-    document.getElementById('editUserForm').action = `/admin/edit_user/${userId}`;
-    document.getElementById('editUserModal').style.display = 'block';
-}
+{% endblock %}
 
-function closeEditModal() {
-    document.getElementById('editUserModal').style.display = 'none';
-}
-
-// 点击模态框外部关闭
-window.onclick = function(event) {
-    const modal = document.getElementById('editUserModal');
-    if (event.target == modal) {
-        modal.style.display = 'none';
-    }
-}
-</script>
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 {% endblock %}

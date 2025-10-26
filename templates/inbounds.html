@@ -3,7 +3,7 @@
 {% block title %}入站节点信息 - SubBoard{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='inbounds.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/inbounds.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -93,24 +93,8 @@
     {% endif %}
 </div>
 
-<script>
-    // 自动刷新功能（可选）
-    let autoRefreshInterval = null;
-    
-    function startAutoRefresh() {
-        autoRefreshInterval = setInterval(() => {
-            location.reload();
-        }, 60000); // 每60秒刷新一次
-    }
-    
-    // 页面加载完成后启动自动刷新
-    // startAutoRefresh();
-    
-    // 页面卸载时清除定时器
-    window.addEventListener('beforeunload', () => {
-        if (autoRefreshInterval) {
-            clearInterval(autoRefreshInterval);
-        }
-    });
-</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/inbounds.js') }}"></script>
 {% endblock %}
